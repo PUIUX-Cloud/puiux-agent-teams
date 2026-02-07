@@ -1,0 +1,103 @@
+{
+  "generated_at": "2026-02-07T17:43:58Z",
+  "system": {
+    "status": "operational",
+    "uptime_hours": 24,
+    "version": "1.0.0"
+  },
+  {
+    "knowledge_base": {
+      "total_files": 9,
+      "files": [
+        {"name": "delivery-playbook.md", "status": "complete", "last_updated": "2026-02-07"},
+        {"name": "design-system.md", "status": "complete", "last_updated": "2026-02-07"},
+        {"name": "discovery-template.md", "status": "complete", "last_updated": "2026-02-07"},
+        {"name": "engineering-standards.md", "status": "complete", "last_updated": "2026-02-07"},
+        {"name": "index.md", "status": "complete", "last_updated": "2026-02-07"},
+        {"name": "pods.md", "status": "complete", "last_updated": "2026-02-07"},
+        {"name": "proposal-templates.md", "status": "complete", "last_updated": "2026-02-07"},
+        {"name": "qa-checklist.md", "status": "complete", "last_updated": "2026-02-07"},
+        {"name": "sales-playbook.md", "status": "complete", "last_updated": "2026-02-07"}
+      ]
+    },
+    "registry": {
+      "valid": true,
+      "total_clients": 1,
+      "by_status": {
+        "presales": 1,
+        "active": 0,
+        "paused": 0,
+        "delivered": 0,
+        "archived": 0
+      },
+      "by_tier": {
+        "beta": 1,
+        "standard": 0,
+        "premium": 0
+      },
+      "duplicates": []
+    },
+    "projects": 
+[
+  {
+    "id": "client-demo-001",
+    "slug": "demo-acme",
+    "name": "ACME Corporation (Demo)",
+    "status": "presales",
+    "presales_stage": "PS0",
+    "tier": "beta",
+    "pod": "corporate",
+    "gates": {
+      "payment_verified": false,
+      "dns_verified": false,
+      "ssl_verified": false
+    },
+    "domains": {
+      "beta": "demo-acme.puiux.cloud",
+      "staging": "staging.demo-acme.puiux.cloud",
+      "production": "demo-acme.com"
+    },
+    "blocked_reason": "Payment not verified, DNS not verified"
+  }
+]
+,
+    "gates_summary": {
+      "total_projects": 1,
+      "blocked": 1,
+      "ready_for_production": 0,
+      "blocking_reasons": {
+        "payment_not_verified": 1,
+        "dns_not_verified": 1
+      }
+    },
+    "agents": {
+      "total": 0,
+      "active": 0,
+      "idle": 0,
+      "agents_list": []
+    },
+    "teams": {
+      "total": 0,
+      "active": 0,
+      "paused": 0,
+      "completed": 0
+    },
+    "activity_log": [
+      {
+        "timestamp": "2026-02-07T17:43:58Z",
+        "type": "system",
+        "message": "Dashboard updated"
+      }
+    ],
+    "deploy_status": {
+      "staging": {
+        "last_deploy": null,
+        "status": "not_configured"
+      },
+      "production": {
+        "last_attempt": null,
+        "status": "blocked",
+        "blocked_by": ["payment_not_verified", "dns_not_verified"]
+      }
+    }
+}
