@@ -15,28 +15,58 @@ node orchestrator.js --client=demo-acme --stage=S2
 
 ### Inputs
 
-Clients need a `brief.json` file in `../client-{slug}/`:
+**Client fixtures are stored INSIDE this repo** at `clients/{slug}/`:
 
+```
+clients/
+├── demo-acme/
+│   ├── brief.json
+│   └── gates.json
+└── demo-retail/
+    ├── brief.json
+    └── gates.json
+```
+
+**brief.json** structure:
 ```json
 {
   "client": {
     "slug": "demo-acme",
-    "name": "Acme Corporation"
+    "name": "Acme Corporation",
+    "industry": "E-commerce"
   },
   "project": {
-    "title": "Project Name",
-    "description": "What to build"
+    "title": "Online Store Platform",
+    "description": "Build a modern e-commerce platform"
   },
   "requirements": {
-    "functional": ["Feature 1", "Feature 2"],
-    "technical": ["Requirement 1"]
+    "functional": ["Product catalog", "Shopping cart", "Payment"],
+    "technical": ["Mobile responsive", "SEO friendly"]
   },
   "constraints": {
     "budget": 50000,
-    "timeline": "12 weeks"
+    "budget_currency": "USD",
+    "timeline": "12 weeks",
+    "tech_preferences": ["React", "Node.js"]
+  },
+  "goals": {
+    "target_launch": "2026-05-01",
+    "expected_users": "10,000/month"
   }
 }
 ```
+
+**gates.json** structure:
+```json
+{
+  "payment_verified": false,
+  "dns_verified": false,
+  "contract_signed": false,
+  "proposal_approved": false
+}
+```
+
+> **Note:** For production clients, link to actual client repos in `client-projects-registry`.
 
 ### Outputs
 
@@ -71,11 +101,21 @@ outputs/demo-acme/PS0/
 
 ```
 orchestrator.js
-├── AgentLoader      # Load & parse agents
-├── GateChecker      # Verify gates (payment, DNS)
-├── SecureLogger     # Auto-redact secrets
-└── Orchestrator     # Execute stages
+├── AgentLoader        # Load & parse agents
+├── GateChecker        # Verify gates (payment, DNS)
+├── ArtifactChecker    # Validate deliverables exist
+├── SecureLogger       # Auto-redact secrets
+└── Orchestrator       # Execute stages
 ```
+
+### Key Features (Phase 3.5 Hardening)
+
+✅ **Artifact Integrity**: All deliverables validated for existence
+✅ **Derived Calculations**: Zero magic numbers - all metrics calculated from real data
+✅ **Conflict Detection**: Tech stack mismatches, coverage gaps, invalid endpoints
+✅ **QA Test Generation**: Extracts endpoints from `api-spec.md`, screens from `wireframes-notes.md`
+✅ **Action Items**: Auto-generated from conflicts and issues
+✅ **Robust Parsing**: JSON markers prevent false positives
 
 ### Sequential Execution (PS0):
 ```
@@ -115,18 +155,54 @@ model: sonnet
 
 ---
 
+## Pipeline Runner
+
+Run complete pipelines (all stages at once):
+
+```bash
+# Run full delivery pipeline (S2 → S3)
+node pipeline-runner.js --client=demo-acme --pipeline=delivery
+
+# Run full presales pipeline (PS0 → PS5)
+node pipeline-runner.js --client=demo-acme --pipeline=presales
+```
+
+**Output:**
+```
+╔═══════════════════════════════════════════╗
+║  PUIUX Pipeline Runner - DELIVERY        ║
+╚═══════════════════════════════════════════╝
+
+Client: demo-acme
+Stages: S2 → S3
+
+🚀 Running S2...
+✅ S2 completed successfully
+
+🚀 Running S3...
+✅ S3 completed successfully
+
+Total: 2/2 stages completed
+✅ Pipeline completed successfully!
+```
+
+---
+
 ## Testing
 
 ```bash
-# Test presales workflow
+# Test single stage
 node orchestrator.js --client=demo-acme --stage=PS0
-
-# Test parallel delivery
 node orchestrator.js --client=demo-acme --stage=S2
 
-# Check outputs
-ls outputs/demo-acme/PS0/
-ls outputs/demo-acme/S2/
+# Test full pipeline
+node pipeline-runner.js --client=demo-acme --pipeline=delivery
+node pipeline-runner.js --client=demo-retail --pipeline=delivery
+
+# Verify outputs
+ls -la outputs/demo-acme/S2/
+cat outputs/demo-acme/S2/coordinator-agent.md
+jq '.result.consolidated' outputs/demo-acme/S2/coordinator-agent.json
 ```
 
 ---

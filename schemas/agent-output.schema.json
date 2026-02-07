@@ -65,6 +65,104 @@
             "type": "string",
             "minLength": 5
           }
+        },
+        "consolidated": {
+          "type": "object",
+          "description": "Coordinator-specific consolidated data (only for coordinator-agent)",
+          "properties": {
+            "total_deliverables": {
+              "type": "number",
+              "minimum": 0
+            },
+            "deliverables_by_agent": {
+              "type": "object",
+              "description": "Count of deliverables per agent"
+            },
+            "total_decisions": {
+              "type": "number",
+              "minimum": 0
+            },
+            "total_issues": {
+              "type": "number",
+              "minimum": 0
+            },
+            "total_actions": {
+              "type": "number",
+              "minimum": 0
+            },
+            "conflicts": {
+              "type": "number",
+              "minimum": 0
+            },
+            "all_deliverables": {
+              "type": "array",
+              "description": "All deliverables from all agents",
+              "items": {
+                "type": "object",
+                "required": ["agent", "key", "file", "exists"],
+                "properties": {
+                  "agent": {
+                    "type": "string",
+                    "description": "Agent that produced this deliverable"
+                  },
+                  "key": {
+                    "type": "string",
+                    "description": "Deliverable key name"
+                  },
+                  "file": {
+                    "type": "string",
+                    "description": "Filename"
+                  },
+                  "exists": {
+                    "type": "boolean",
+                    "description": "Whether file exists on disk"
+                  }
+                }
+              }
+            },
+            "action_items": {
+              "type": "array",
+              "description": "Action items with standardized structure",
+              "items": {
+                "type": "object",
+                "required": ["id", "owner", "severity", "title", "source", "next_step"],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^[A-Z0-9]+-AI-[0-9]{3}$",
+                    "description": "Action item ID (e.g., S2-AI-001)"
+                  },
+                  "owner": {
+                    "type": "string",
+                    "description": "Agent or team responsible"
+                  },
+                  "severity": {
+                    "type": "string",
+                    "enum": ["low", "medium", "high", "critical"],
+                    "description": "Severity level"
+                  },
+                  "title": {
+                    "type": "string",
+                    "minLength": 10,
+                    "description": "Action item title/description"
+                  },
+                  "source": {
+                    "type": "string",
+                    "description": "Where this action item came from"
+                  },
+                  "evidence": {
+                    "type": "string",
+                    "description": "Evidence or context for this action"
+                  },
+                  "next_step": {
+                    "type": "string",
+                    "minLength": 5,
+                    "description": "Recommended next step to resolve"
+                  }
+                }
+              }
+            }
+          }
         }
       }
     },
