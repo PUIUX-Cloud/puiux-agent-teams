@@ -1,0 +1,46 @@
+{
+  "client": {
+    "slug": "demo-acme",
+    "name": "Acme Corporation",
+    "industry": "E-commerce",
+    "contact": {
+      "name": "John Doe",
+      "email": "john@acme.com",
+      "phone": "+1-555-0100"
+    }
+  },
+  "project": {
+    "title": "Online Store Platform",
+    "description": "Build a modern e-commerce platform for selling products online",
+    "type": "web-application",
+    "priority": "high"
+  },
+  "requirements": {
+    "functional": [
+      "Product catalog with search/filter",
+      "Shopping cart functionality",
+      "User registration and login",
+      "Payment processing (Stripe)",
+      "Order management",
+      "Admin dashboard"
+    ],
+    "technical": [
+      "Mobile responsive",
+      "SEO friendly",
+      "Fast loading (<3s)",
+      "Secure (HTTPS, PCI compliance)",
+      "Arabic/English support"
+    ]
+  },
+  "constraints": {
+    "budget": 50000,
+    "budget_currency": "USD",
+    "timeline": "12 weeks",
+    "tech_preferences": ["React", "Node.js", "PostgreSQL"]
+  },
+  "goals": {
+    "target_launch": "2026-05-01",
+    "expected_users": "10,000/month",
+    "expected_transactions": "500/month"
+  }
+}

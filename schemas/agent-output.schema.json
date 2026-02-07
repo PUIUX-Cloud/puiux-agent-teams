@@ -1,0 +1,106 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "PUIUX Agent Output",
+  "description": "Standard output format for all PUIUX agents",
+  "type": "object",
+  "required": ["status", "result", "metadata"],
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": ["success", "blocked", "failed"],
+      "description": "Execution status"
+    },
+    "result": {
+      "type": "object",
+      "required": ["summary", "deliverables", "decisions"],
+      "properties": {
+        "summary": {
+          "type": "string",
+          "description": "Brief summary of work completed",
+          "minLength": 10
+        },
+        "deliverables": {
+          "type": "object",
+          "description": "Map of deliverable_name -> filename (all files must exist)",
+          "patternProperties": {
+            "^[a-z_]+$": {
+              "type": "string",
+              "pattern": "^[a-zA-Z0-9_-]+\\.(md|json|yaml|yml|txt|pdf|png|jpg)$"
+            }
+          }
+        },
+        "decisions": {
+          "type": "array",
+          "description": "Key decisions made during execution",
+          "items": {
+            "type": "string",
+            "minLength": 5
+          }
+        },
+        "issues": {
+          "type": "array",
+          "description": "Problems encountered",
+          "items": {
+            "type": "object",
+            "required": ["severity", "description"],
+            "properties": {
+              "severity": {
+                "type": "string",
+                "enum": ["low", "medium", "high", "critical"]
+              },
+              "description": {
+                "type": "string",
+                "minLength": 10
+              },
+              "recommendation": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "next_steps": {
+          "type": "array",
+          "description": "Recommended next actions",
+          "items": {
+            "type": "string",
+            "minLength": 5
+          }
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "required": ["agent", "client", "stage", "timestamp"],
+      "properties": {
+        "agent": {
+          "type": "string",
+          "description": "Agent identifier"
+        },
+        "client": {
+          "type": "string",
+          "description": "Client slug"
+        },
+        "stage": {
+          "type": "string",
+          "pattern": "^(PS[0-5]|S[0-5])$"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "duration_ms": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    },
+    "tokens_used": {
+      "type": ["number", "null"],
+      "minimum": 0
+    },
+    "cost_usd": {
+      "type": ["number", "null"],
+      "minimum": 0
+    }
+  }
+}

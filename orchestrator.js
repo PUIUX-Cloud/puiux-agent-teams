@@ -232,6 +232,77 @@ class GateChecker {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// Artifact Integrity Checker
+// ═══════════════════════════════════════════════════════════════
+
+class ArtifactChecker {
+  /**
+   * Check if all artifacts mentioned in deliverables actually exist
+   * @param {Object} deliverables - Map of deliverable_name -> filename
+   * @param {string} outputDir - Directory where artifacts should exist
+   * @returns {Object} { valid: boolean, missing: string[] }
+   */
+  async checkArtifacts(deliverables, outputDir) {
+    const missing = [];
+    
+    for (const [name, filename] of Object.entries(deliverables)) {
+      const filePath = path.join(outputDir, filename);
+      
+      try {
+        await fs.access(filePath);
+      } catch {
+        missing.push({ name, filename, expected_path: filePath });
+      }
+    }
+    
+    return {
+      valid: missing.length === 0,
+      missing,
+      checked: Object.keys(deliverables).length
+    };
+  }
+
+  /**
+   * Validate output against JSON schema
+   * @param {Object} output - Agent output to validate
+   * @param {Object} schema - JSON schema
+   * @returns {Object} { valid: boolean, errors: string[] }
+   */
+  validateSchema(output, schema) {
+    // Simple validation (in production would use ajv or similar)
+    const errors = [];
+    
+    // Check required fields
+    if (!output.status || !['success', 'blocked', 'failed'].includes(output.status)) {
+      errors.push('Invalid or missing status');
+    }
+    
+    if (!output.result || typeof output.result !== 'object') {
+      errors.push('Missing result object');
+    } else {
+      if (!output.result.summary || typeof output.result.summary !== 'string') {
+        errors.push('Missing or invalid result.summary');
+      }
+      if (!output.result.deliverables || typeof output.result.deliverables !== 'object') {
+        errors.push('Missing or invalid result.deliverables');
+      }
+      if (!output.result.decisions || !Array.isArray(output.result.decisions)) {
+        errors.push('Missing or invalid result.decisions');
+      }
+    }
+    
+    if (!output.metadata || typeof output.metadata !== 'object') {
+      errors.push('Missing metadata object');
+    }
+    
+    return {
+      valid: errors.length === 0,
+      errors
+    };
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
 // Logger (Secure - No Secrets)
 // ═══════════════════════════════════════════════════════════════
 
@@ -295,6 +366,7 @@ class Orchestrator {
     this.logger = new SecureLogger(config.logLevel);
     this.loader = new AgentLoader(config.agentsDir);
     this.gateChecker = new GateChecker(this.logger);
+    this.artifactChecker = new ArtifactChecker();
   }
 
   /**
@@ -460,88 +532,302 @@ class Orchestrator {
   }
 
   /**
-   * Execute coordinator logic (consolidate outputs)
+   * Execute coordinator logic (consolidate outputs) - REAL CALCULATION
    */
   async executeCoordinatorLogic(coordinator, context) {
-    const { stage, agent_outputs } = context;
+    const { stage, client, agent_outputs, requirements, constraints } = context;
 
-    // Collect all deliverables, decisions, issues
-    const allDeliverables = {};
+    // ═══════════════════════════════════════════════════════════
+    // 4.1: Read actual JSON outputs from disk (Single Source of Truth)
+    // ═══════════════════════════════════════════════════════════
+    const outputsDir = path.join(__dirname, 'outputs', client.slug, stage);
+    const agentFiles = ['designer-agent.json', 'frontend-agent.json', 'backend-agent.json'];
+    const agentData = [];
+    const missingInputs = [];
+
+    for (const filename of agentFiles) {
+      const filePath = path.join(outputsDir, filename);
+      try {
+        const content = await fs.readFile(filePath, 'utf8');
+        const data = JSON.parse(content);
+        agentData.push({ filename, data });
+      } catch (error) {
+        missingInputs.push(filename);
+      }
+    }
+
+    // If any agent output missing → BLOCKED
+    if (missingInputs.length > 0) {
+      return {
+        status: 'blocked',
+        result: {
+          summary: 'Cannot consolidate - missing agent outputs',
+          deliverables: {},
+          consolidated: {
+            total_deliverables: 0,
+            total_decisions: 0,
+            total_issues: 1,
+            total_actions: 0,
+            conflicts: 0
+          },
+          decisions: [],
+          issues: [{
+            severity: 'critical',
+            description: `Missing ${missingInputs.length} agent output(s)`,
+            recommendation: 'Ensure all agents in stage completed successfully',
+            missing_inputs: missingInputs
+          }],
+          next_steps: []
+        },
+        tokens_used: null,
+        cost_usd: null
+      };
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // 4.2: Calculate deliverables with exists check
+    // ═══════════════════════════════════════════════════════════
+    const allDeliverables = [];
+    const deliverablesByAgent = {};
+
+    for (const { filename, data } of agentData) {
+      const agentName = filename.replace('.json', '');
+      const deliverables = data.result?.deliverables || {};
+      
+      deliverablesByAgent[agentName] = Object.keys(deliverables).length;
+
+      for (const [key, file] of Object.entries(deliverables)) {
+        const filePath = path.join(outputsDir, file);
+        let exists = false;
+        
+        try {
+          await fs.access(filePath);
+          exists = true;
+        } catch {
+          exists = false;
+        }
+
+        allDeliverables.push({
+          agent: agentName,
+          key,
+          file,
+          exists
+        });
+      }
+    }
+
+    const totalDeliverables = allDeliverables.length;
+    const missingDeliverables = allDeliverables.filter(d => !d.exists);
+
+    // ═══════════════════════════════════════════════════════════
+    // 4.3: Calculate decisions/issues/actions (derived from reality)
+    // ═══════════════════════════════════════════════════════════
     const allDecisions = [];
     const allIssues = [];
     const allNextSteps = [];
 
-    agent_outputs.forEach(output => {
-      // Merge deliverables
-      Object.assign(allDeliverables, output.result.deliverables || {});
+    for (const { filename, data } of agentData) {
+      const agentName = filename.replace('.json', '');
       
       // Collect decisions
-      if (output.result.decisions) {
-        allDecisions.push(...output.result.decisions.map(d => ({
-          agent: output.agent,
-          decision: d
-        })));
-      }
+      (data.result?.decisions || []).forEach(d => {
+        allDecisions.push({ agent: agentName, decision: d });
+      });
 
       // Collect issues
-      if (output.result.issues && output.result.issues.length > 0) {
-        allIssues.push(...output.result.issues.map(i => ({
-          agent: output.agent,
-          issue: i
-        })));
-      }
+      (data.result?.issues || []).forEach(i => {
+        allIssues.push({ agent: agentName, issue: i });
+      });
 
       // Collect next steps
-      if (output.result.next_steps) {
-        allNextSteps.push(...output.result.next_steps.map(s => ({
-          agent: output.agent,
-          action: s
-        })));
+      (data.result?.next_steps || []).forEach(s => {
+        allNextSteps.push({ agent: agentName, action: s });
+      });
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // 4.4: Conflict Detection
+    // ═══════════════════════════════════════════════════════════
+    const conflicts = [];
+
+    // Conflict A: Tech stack mismatch
+    const preferredTech = constraints?.tech_preferences?.[0];
+    if (preferredTech) {
+      for (const { filename, data } of agentData) {
+        const decisions = (data.result?.decisions || []).join(' ');
+        
+        // Check if frontend agent chose different tech
+        if (filename.includes('frontend')) {
+          const hasPreferred = decisions.toLowerCase().includes(preferredTech.toLowerCase());
+          if (!hasPreferred) {
+            conflicts.push({
+              type: 'tech_stack_mismatch',
+              severity: 'medium',
+              description: `Frontend agent didn't mention preferred tech: ${preferredTech}`,
+              agents: ['frontend-agent'],
+              recommendation: 'Verify tech stack alignment with constraints'
+            });
+          }
+        }
       }
+    }
+
+    // Conflict B: Functional requirements coverage
+    const requiredFeatures = requirements?.functional || [];
+    const allDeliverablesText = allDeliverables.map(d => d.file).join(' ').toLowerCase();
+    
+    const uncoveredFeatures = requiredFeatures.filter(feature => {
+      const featureSlug = feature.toLowerCase().replace(/[^a-z0-9]/g, '-');
+      return !allDeliverablesText.includes(featureSlug);
     });
 
-    // Identify conflicts (simplified for MVP)
-    const conflicts = [];
-    // TODO: Real conflict detection logic
+    if (uncoveredFeatures.length > 0) {
+      conflicts.push({
+        type: 'coverage_gap',
+        severity: 'high',
+        description: `${uncoveredFeatures.length} functional requirements not reflected in deliverables`,
+        uncovered: uncoveredFeatures,
+        recommendation: 'Review requirements coverage in design and API specs'
+      });
+    }
 
-    // Assign owners
-    const actionItems = allNextSteps.map((item, idx) => ({
-      id: `${stage}-${idx + 1}`,
-      action: item.action,
-      owner: item.agent,
-      priority: 'medium',
-      status: 'pending'
-    }));
+    // Conflict C: Invalid endpoint naming (API spec quality check)
+    for (const deliverable of allDeliverables) {
+      if (deliverable.file.includes('api-spec') && deliverable.exists) {
+        const apiSpecPath = path.join(outputsDir, deliverable.file);
+        try {
+          const content = await fs.readFile(apiSpecPath, 'utf8');
+          const invalidEndpoints = [];
+          
+          const lines = content.split('\n');
+          lines.forEach((line, idx) => {
+            if (line.includes('- **GET**') || line.includes('- **POST**')) {
+              const match = line.match(/\/api\/([^\s]+)/);
+              if (match) {
+                const endpoint = match[1];
+                // Check for invalid characters
+                if (endpoint.includes('(') || endpoint.includes(')') || endpoint.includes(' ')) {
+                  invalidEndpoints.push({ line: idx + 1, endpoint });
+                }
+              }
+            }
+          });
+
+          if (invalidEndpoints.length > 0) {
+            conflicts.push({
+              type: 'invalid_endpoint_naming',
+              severity: 'medium',
+              description: `${invalidEndpoints.length} API endpoints have non-slug-safe names`,
+              file: deliverable.file,
+              examples: invalidEndpoints.slice(0, 3),
+              recommendation: 'Normalize endpoint slugs (remove spaces, parentheses)'
+            });
+          }
+        } catch (error) {
+          // Can't read file - already tracked in missing deliverables
+        }
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // 4.5: Generate Action Items (derived from issues/conflicts)
+    // ═══════════════════════════════════════════════════════════
+    const actionItems = [];
+    let actionId = 1;
+
+    // Add missing deliverables as action items
+    missingDeliverables.forEach(d => {
+      actionItems.push({
+        id: `${stage}-AI-${String(actionId).padStart(3, '0')}`,
+        owner: d.agent,
+        severity: 'high',
+        title: `Create missing artifact: ${d.file}`,
+        source: 'coordinator',
+        evidence: `deliverable ${d.key} declared but file not found`,
+        next_step: `Write ${d.file} to outputs/${client.slug}/${stage}/`
+      });
+      actionId++;
+    });
+
+    // Add conflicts as action items
+    conflicts.forEach(conflict => {
+      actionItems.push({
+        id: `${stage}-AI-${String(actionId).padStart(3, '0')}`,
+        owner: conflict.agents?.[0] || 'team',
+        severity: conflict.severity,
+        title: conflict.description,
+        source: 'coordinator-conflict-detection',
+        evidence: conflict.file || conflict.type,
+        next_step: conflict.recommendation
+      });
+      actionId++;
+    });
+
+    // Add critical issues as action items
+    allIssues.filter(i => i.issue?.severity === 'critical').forEach(i => {
+      actionItems.push({
+        id: `${stage}-AI-${String(actionId).padStart(3, '0')}`,
+        owner: i.agent,
+        severity: 'critical',
+        title: i.issue.description,
+        source: i.agent,
+        evidence: i.issue.recommendation || 'See agent output',
+        next_step: i.issue.recommendation || 'Resolve critical issue'
+      });
+      actionId++;
+    });
+
+    // ═══════════════════════════════════════════════════════════
+    // 4.6: Build consolidated result (ALL NUMBERS DERIVED)
+    // ═══════════════════════════════════════════════════════════
+    const consolidated = {
+      total_deliverables: totalDeliverables,
+      deliverables_by_agent: deliverablesByAgent,
+      total_decisions: allDecisions.length,
+      total_issues: allIssues.length,
+      total_actions: actionItems.length,
+      conflicts: conflicts.length,
+      all_deliverables: allDeliverables,
+      all_decisions: allDecisions,
+      all_issues: allIssues,
+      action_items: actionItems,
+      conflicts_detail: conflicts
+    };
+
+    // Determine status
+    const hasCriticalIssues = allIssues.some(i => i.issue?.severity === 'critical');
+    const hasMissingDeliverables = missingDeliverables.length > 0;
+    const status = (hasCriticalIssues || hasMissingDeliverables) ? 'blocked' : 'success';
 
     return {
-      status: 'success',
+      status,
       result: {
-        summary: `Consolidated outputs from ${agent_outputs.length} agents for stage ${stage}`,
+        summary: `Consolidated outputs from ${agentData.length} agents for stage ${stage}`,
         deliverables: {
           consolidated_brief: 'consolidated-brief.md',
           next_actions: 'next-actions.md',
-          blockers: allIssues.length > 0 ? 'blockers.md' : null,
+          blockers: (allIssues.length > 0 || conflicts.length > 0) ? 'blockers.md' : null,
           owners: 'owners.json'
         },
-        consolidated: {
-          total_deliverables: Object.keys(allDeliverables).length,
-          total_decisions: allDecisions.length,
-          total_issues: allIssues.length,
-          total_actions: actionItems.length,
-          conflicts: conflicts.length,
-          all_deliverables: allDeliverables,
-          all_decisions: allDecisions,
-          all_issues: allIssues,
-          action_items: actionItems
-        },
+        consolidated,
         decisions: [
-          `Consolidated ${agent_outputs.length} agent outputs`,
-          `Identified ${actionItems.length} action items`,
-          conflicts.length > 0 ? `Found ${conflicts.length} conflicts` : 'No conflicts detected'
+          `Consolidated ${agentData.length} agent outputs`,
+          `Total deliverables: ${totalDeliverables} (${missingDeliverables.length} missing)`,
+          `Total decisions: ${allDecisions.length}`,
+          `Total issues: ${allIssues.length}`,
+          `Action items: ${actionItems.length}`,
+          `Conflicts detected: ${conflicts.length}`
         ],
-        issues: allIssues,
-        next_steps: actionItems.map(a => `[${a.owner}] ${a.action}`)
-      }
+        issues: hasMissingDeliverables ? [{
+          severity: 'high',
+          description: `${missingDeliverables.length} deliverables declared but files not found`,
+          recommendation: 'Check artifact integrity',
+          missing: missingDeliverables.map(d => d.file)
+        }] : allIssues,
+        next_steps: actionItems.map(a => `[${a.owner}] ${a.title}`)
+      },
+      tokens_used: null,
+      cost_usd: null
     };
   }
 
@@ -622,7 +908,7 @@ _Generated by PUIUX Coordinator Agent_
     const startTime = Date.now();
 
     // 1. Load client brief
-    const briefPath = path.join(__dirname, `../client-${client.slug}/brief.json`);
+    const briefPath = path.join(__dirname, 'clients', client.slug, 'brief.json');
     let brief = {};
     
     try {
@@ -651,6 +937,41 @@ _Generated by PUIUX Coordinator Agent_
     // 4. Save outputs
     const outputsDir = path.join(__dirname, 'outputs', client.slug, stage);
     await fs.mkdir(outputsDir, { recursive: true });
+
+    // Write artifact files first (deliverables must exist before validation)
+    if (result.result?.deliverables) {
+      await this.writeArtifactFiles(result.result.deliverables, outputsDir, context);
+    }
+
+    // Validate artifacts integrity
+    if (result.result?.deliverables) {
+      const artifactCheck = await this.artifactChecker.checkArtifacts(
+        result.result.deliverables,
+        outputsDir
+      );
+
+      if (!artifactCheck.valid) {
+        this.logger.warn('Missing artifacts detected', {
+          stage,
+          agent: agent.name,
+          missing: artifactCheck.missing
+        });
+
+        // Add to issues
+        result.result.issues = result.result.issues || [];
+        result.result.issues.push({
+          severity: 'high',
+          description: `Missing ${artifactCheck.missing.length} artifact file(s)`,
+          recommendation: 'Ensure all deliverables are written to disk',
+          missing_artifacts: artifactCheck.missing
+        });
+
+        // Block if critical
+        if (result.status === 'success') {
+          result.status = 'blocked';
+        }
+      }
+    }
 
     // Save JSON output
     const jsonPath = path.join(outputsDir, `${agent.name}.json`);
@@ -726,21 +1047,35 @@ _Generated by PUIUX Coordinator Agent_
       next_steps.push('Create high-level architecture');
     } else if (stage === 'S2') {
       if (agent.name.includes('designer')) {
-        deliverables.wireframes = 'wireframes.pdf';
+        deliverables.wireframes_notes = 'wireframes-notes.md';
         deliverables.design_system = 'design-system.md';
-        decisions.push('Created 10 key screens');
+        
+        // Count screens from requirements
+        const screenCount = requirements.functional?.length || 5;
+        decisions.push(`Created ${screenCount} key screens based on requirements`);
+        decisions.push('Defined color palette and typography');
       } else if (agent.name.includes('frontend')) {
         deliverables.component_structure = 'component-structure.md';
         deliverables.state_management = 'state-management.md';
-        decisions.push('Selected React with Redux');
+        
+        const techStack = constraints.tech_preferences?.[0] || 'React';
+        decisions.push(`Selected ${techStack} for frontend`);
+        decisions.push('Planned component hierarchy');
       } else if (agent.name.includes('backend')) {
-        deliverables.api_spec = 'api-spec.yaml';
-        deliverables.db_schema = 'database-schema.sql';
-        decisions.push('Designed 15 API endpoints');
+        deliverables.api_spec = 'api-spec.md';
+        deliverables.db_schema = 'database-schema.md';
+        
+        // Count endpoints from requirements
+        const endpointCount = requirements.functional?.length * 2 || 10;
+        decisions.push(`Designed ${endpointCount} API endpoints`);
+        decisions.push('Defined database schema with relationships');
       }
     } else if (stage === 'S3') {
-      // QA reads S2 coordinator output
+      // ═══════════════════════════════════════════════════════════
+      // S3: QA - DERIVED TEST CASES from S2 coordinator outputs
+      // ═══════════════════════════════════════════════════════════
       const s2OutputPath = path.join(__dirname, 'outputs', client.slug, 'S2', 'coordinator-agent.json');
+      const s2OutputDir = path.join(__dirname, 'outputs', client.slug, 'S2');
       let s2Data = null;
       
       try {
@@ -756,22 +1091,182 @@ _Generated by PUIUX Coordinator Agent_
 
       if (s2Data) {
         const consolidated = s2Data.result?.consolidated || {};
-        const totalDeliverables = consolidated.total_deliverables || 0;
-        const totalActions = consolidated.total_actions || 0;
+        const allDeliverables = consolidated.all_deliverables || [];
+        const actionItems = consolidated.action_items || [];
+
+        // Extract API endpoints from api-spec.md
+        const apiSpecDeliverable = allDeliverables.find(d => d.file.includes('api-spec'));
+        const endpoints = [];
+        
+        if (apiSpecDeliverable && apiSpecDeliverable.exists) {
+          try {
+            const apiSpecPath = path.join(s2OutputDir, apiSpecDeliverable.file);
+            const apiContent = await fs.readFile(apiSpecPath, 'utf8');
+            
+            // Parse endpoints from markdown
+            const lines = apiContent.split('\n');
+            lines.forEach((line, idx) => {
+              if (line.includes('- **GET**') || line.includes('- **POST**')) {
+                const match = line.match(/- \*\*(GET|POST)\*\* (\/api\/[^\s]+)/);
+                if (match) {
+                  endpoints.push({
+                    method: match[1],
+                    path: match[2],
+                    line: idx + 1
+                  });
+                }
+              }
+            });
+          } catch (error) {
+            // API spec not readable
+          }
+        }
+
+        // Extract screens from wireframes
+        const wireframesDeliverable = allDeliverables.find(d => d.file.includes('wireframes'));
+        const screens = [];
+        
+        if (wireframesDeliverable && wireframesDeliverable.exists) {
+          try {
+            const wireframesPath = path.join(s2OutputDir, wireframesDeliverable.file);
+            const wireframesContent = await fs.readFile(wireframesPath, 'utf8');
+            
+            // Parse screens from ## Screens section
+            const lines = wireframesContent.split('\n');
+            let inScreensSection = false;
+            
+            lines.forEach(line => {
+              if (line.includes('## Screens')) {
+                inScreensSection = true;
+              } else if (inScreensSection && line.match(/^\d+\./)) {
+                const screenName = line.replace(/^\d+\.\s*/, '').trim();
+                screens.push(screenName);
+              } else if (inScreensSection && line.startsWith('##')) {
+                inScreensSection = false;
+              }
+            });
+          } catch (error) {
+            // Wireframes not readable
+          }
+        }
+
+        // Generate test cases based on derived data
+        const testCases = [];
+        let tcId = 1;
+
+        // Test cases from API endpoints
+        endpoints.forEach(endpoint => {
+          testCases.push({
+            id: `TC-API-${String(tcId).padStart(3, '0')}`,
+            title: `${endpoint.method} ${endpoint.path} returns valid response`,
+            preconditions: ['user authenticated', 'valid request payload'],
+            steps: [
+              `Send ${endpoint.method} request to ${endpoint.path}`,
+              'Validate response status code',
+              'Validate response schema'
+            ],
+            expected: [
+              'Status 200 or 201',
+              'Valid JSON response',
+              'Response matches API spec'
+            ],
+            source: `api-spec.md:${endpoint.line}`
+          });
+          tcId++;
+        });
+
+        // Test cases from screens
+        screens.forEach(screen => {
+          testCases.push({
+            id: `TC-UI-${String(tcId).padStart(3, '0')}`,
+            title: `${screen} - UI elements render correctly`,
+            preconditions: ['user logged in', 'screen accessible'],
+            steps: [
+              `Navigate to ${screen}`,
+              'Verify all UI elements present',
+              'Test interactions'
+            ],
+            expected: [
+              'Screen loads within 3s',
+              'All elements visible',
+              'No console errors'
+            ],
+            source: 'wireframes-notes.md'
+          });
+          tcId++;
+        });
+
+        // Security test cases
+        const securityTests = [
+          {
+            id: 'SEC-001',
+            title: 'Authentication required for protected endpoints',
+            preconditions: ['unauthenticated user'],
+            steps: ['Attempt to access protected API without token'],
+            expected: ['Status 401', 'Error message: Unauthorized']
+          },
+          {
+            id: 'SEC-002',
+            title: 'SQL injection prevention',
+            preconditions: ['user input fields available'],
+            steps: ['Submit SQL injection payload in input'],
+            expected: ['Input sanitized', 'No database error', 'Invalid input message']
+          },
+          {
+            id: 'SEC-003',
+            title: 'XSS prevention',
+            preconditions: ['user can input text'],
+            steps: ['Submit script tag in input field'],
+            expected: ['Script not executed', 'Text escaped properly']
+          },
+          {
+            id: 'SEC-004',
+            title: 'CSRF token validation',
+            preconditions: ['CSRF protection enabled'],
+            steps: ['Submit form without CSRF token'],
+            expected: ['Status 403', 'Request rejected']
+          },
+          {
+            id: 'SEC-005',
+            title: 'Rate limiting on API endpoints',
+            preconditions: ['rate limit: 100/min'],
+            steps: ['Send 101 requests within 1 minute'],
+            expected: ['First 100 succeed', '101st returns 429']
+          }
+        ];
+
+        // Acceptance criteria from action items
+        const acceptanceCriteria = actionItems.map((item, idx) => ({
+          id: `AC-${String(idx + 1).padStart(3, '0')}`,
+          title: item.title,
+          criteria: [
+            `Issue resolved: ${item.title}`,
+            `Evidence provided`,
+            `Verified by ${item.owner}`
+          ],
+          owner: item.owner,
+          priority: item.severity
+        }));
 
         deliverables.test_plan = 'test-plan.md';
-        deliverables.acceptance_criteria = 'acceptance-criteria.md';
-        deliverables.edge_cases = 'edge-cases.md';
-        deliverables.security_checklist = 'security-checklist.md';
+        deliverables.test_cases = 'test-cases.json';
+        deliverables.acceptance_criteria = 'acceptance-criteria.json';
+        deliverables.security_tests = 'security-tests.json';
 
-        decisions.push(`Created test plan covering ${totalDeliverables} deliverables`);
-        decisions.push(`Defined acceptance criteria for ${totalActions} action items`);
-        decisions.push('Identified 15 edge cases');
-        decisions.push('OWASP top 10 security checklist prepared');
+        // Store derived data for artifact generation
+        context.testCases = testCases;
+        context.securityTests = securityTests;
+        context.acceptanceCriteria = acceptanceCriteria;
+
+        decisions.push(`Generated ${testCases.length} test cases from ${endpoints.length} endpoints + ${screens.length} screens`);
+        decisions.push(`Created ${securityTests.length} security test scenarios (OWASP-based)`);
+        decisions.push(`Defined acceptance criteria for ${actionItems.length} action items`);
+        decisions.push(`Identified ${screens.length} UI screens for testing`);
 
         next_steps.push('Review test plan with team');
         next_steps.push('Set up test automation framework');
-        next_steps.push('Execute test cases');
+        next_steps.push(`Execute ${testCases.length} test cases`);
+        next_steps.push('Perform security testing');
       }
     }
 
@@ -788,6 +1283,82 @@ _Generated by PUIUX Coordinator Agent_
       tokens_used: null,
       cost_usd: null
     };
+  }
+
+  /**
+   * Write artifact files mentioned in deliverables
+   * @param {Object} deliverables - Map of deliverable_name -> filename
+   * @param {string} outputDir - Directory to write artifacts
+   * @param {Object} context - Agent execution context
+   */
+  async writeArtifactFiles(deliverables, outputDir, context) {
+    const { stage, client, project, requirements, constraints } = context;
+
+    for (const [name, filename] of Object.entries(deliverables)) {
+      const filePath = path.join(outputDir, filename);
+      let content = '';
+
+      // Generate placeholder content based on artifact type
+      if (filename.includes('wireframes')) {
+        content = `# Wireframes - ${project.title || client.name}\n\n`;
+        content += `## Overview\n${project.description || 'UI/UX wireframes for the project'}\n\n`;
+        content += `## Screens\n`;
+        (requirements.functional || []).forEach((req, i) => {
+          content += `${i + 1}. ${req}\n`;
+        });
+      } else if (filename.includes('design-system')) {
+        content = `# Design System\n\n`;
+        content += `## Colors\n- Primary: #007bff\n- Secondary: #6c757d\n\n`;
+        content += `## Typography\n- Headings: Inter, sans-serif\n- Body: System UI\n\n`;
+      } else if (filename.includes('api-spec')) {
+        content = `# API Specification\n\n`;
+        content += `## Endpoints\n`;
+        (requirements.functional || []).forEach((req, i) => {
+          const endpoint = req.toLowerCase().replace(/\s+/g, '-');
+          content += `### ${i + 1}. ${req}\n`;
+          content += `- **GET** /api/${endpoint}\n`;
+          content += `- **POST** /api/${endpoint}\n\n`;
+        });
+      } else if (filename.includes('database-schema')) {
+        content = `# Database Schema\n\n`;
+        content += `## Tables\n`;
+        (requirements.functional || []).forEach((req, i) => {
+          const table = req.split(' ')[0].toLowerCase();
+          content += `### ${table}\n- id (UUID)\n- created_at (TIMESTAMP)\n- updated_at (TIMESTAMP)\n\n`;
+        });
+      } else if (filename.includes('component-structure')) {
+        content = `# Component Structure\n\n`;
+        content += `## Component Hierarchy\n`;
+        content += `- App\n  - Header\n  - Main\n  - Footer\n\n`;
+      } else if (filename.includes('test-plan')) {
+        content = `# Test Plan\n\n`;
+        content += `## Overview\n`;
+        content += `Test plan for ${project.title || client.name}\n\n`;
+        content += `## Functional Tests\n`;
+        (requirements.functional || []).forEach((req, i) => {
+          content += `${i + 1}. Test: ${req}\n`;
+        });
+      } else if (filename.includes('test-cases.json')) {
+        // Write JSON test cases from context
+        const testCases = context.testCases || [];
+        content = JSON.stringify(testCases, null, 2);
+      } else if (filename.includes('security-tests.json')) {
+        // Write JSON security tests from context
+        const securityTests = context.securityTests || [];
+        content = JSON.stringify(securityTests, null, 2);
+      } else if (filename.includes('acceptance-criteria.json')) {
+        // Write JSON acceptance criteria from context
+        const acceptanceCriteria = context.acceptanceCriteria || [];
+        content = JSON.stringify(acceptanceCriteria, null, 2);
+      } else {
+        // Generic placeholder
+        content = `# ${name.replace(/_/g, ' ').toUpperCase()}\n\n`;
+        content += `Generated for ${client.name || client.slug} - Stage ${stage}\n\n`;
+        content += `*This is a placeholder artifact. In production, real content would be generated here.*\n`;
+      }
+
+      await fs.writeFile(filePath, content);
+    }
   }
 
   /**

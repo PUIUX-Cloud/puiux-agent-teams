@@ -1,0 +1,52 @@
+{
+  "client": {
+    "slug": "demo-retail",
+    "name": "RetailPro Solutions",
+    "industry": "Retail Management",
+    "contact": {
+      "name": "Sarah Ahmed",
+      "email": "sarah@retailpro.sa",
+      "phone": "+966-50-123-4567"
+    }
+  },
+  "project": {
+    "title": "Multi-Branch Retail Management System",
+    "description": "Comprehensive POS and inventory management system for retail chains with multiple branches",
+    "type": "web-application",
+    "priority": "high"
+  },
+  "requirements": {
+    "functional": [
+      "Point of Sale (POS) with barcode scanning",
+      "Real-time inventory tracking across branches",
+      "Supplier management and purchase orders",
+      "Staff management with role-based access",
+      "Sales reports and analytics",
+      "Returns and exchanges handling",
+      "Stock transfer between branches",
+      "Low stock alerts",
+      "Barcode label printing"
+    ],
+    "technical": [
+      "Offline mode support for POS",
+      "Real-time sync when online",
+      "Barcode scanner integration",
+      "Receipt printer support",
+      "Multi-currency support (SAR/USD/AED)",
+      "Arabic UI (RTL)",
+      "Fast search (<500ms)"
+    ]
+  },
+  "constraints": {
+    "budget": 75000,
+    "budget_currency": "SAR",
+    "timeline": "16 weeks",
+    "tech_preferences": ["Vue.js", "Python", "MySQL"]
+  },
+  "goals": {
+    "target_launch": "2026-06-15",
+    "expected_branches": "15 branches",
+    "expected_daily_transactions": "2000/day",
+    "expected_products": "50,000 SKUs"
+  }
+}

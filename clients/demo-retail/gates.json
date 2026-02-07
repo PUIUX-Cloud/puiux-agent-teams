@@ -1,0 +1,17 @@
+{
+  "payment_verified": false,
+  "dns_verified": false,
+  "contract_signed": false,
+  "proposal_approved": false,
+  "requirements_approved": false,
+  "qa_passed": false,
+  "staging_approved": false,
+  "client_approval": false,
+  "notes": {
+    "payment_verified": "Waiting for initial payment (25% SAR 18,750)",
+    "dns_verified": "DNS setup pending",
+    "contract_signed": "Contract under legal review"
+  },
+  "updated_at": "2026-02-07T20:25:00Z",
+  "updated_by": "system"
+}

@@ -1,0 +1,17 @@
+{
+  "payment_verified": false,
+  "dns_verified": false,
+  "contract_signed": false,
+  "proposal_approved": false,
+  "requirements_approved": false,
+  "qa_passed": false,
+  "staging_approved": false,
+  "client_approval": false,
+  "notes": {
+    "payment_verified": "Waiting for 30% deposit payment",
+    "dns_verified": "DNS not configured yet",
+    "contract_signed": "Contract pending client signature"
+  },
+  "updated_at": "2026-02-07T20:08:00Z",
+  "updated_by": "system"
+}
