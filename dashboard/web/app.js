@@ -281,24 +281,30 @@ function renderGatesTable(projects) {
     return;
   }
   
-  tbody.innerHTML = projects.map(project => `
-    <tr class="${getGatesStatus(project.gates)}">
-      <td><strong>${project.name}</strong><br><small>${project.slug}</small></td>
-      <td>${project.presales_stage || project.status}</td>
-      <td class="gate-cell ${project.gates.payment_verified ? 'passed' : 'blocked'}">
-        ${project.gates.payment_verified ? '✅ تم التحقق' : '❌ لم يتم'}
+  tbody.innerHTML = projects.map(project => {
+    const gates = project.gates || {};
+    return `
+    <tr class="${getGatesStatus(gates)}">
+      <td><strong>${escapeHtml(project.name)}</strong><br><small>${escapeHtml(project.slug)}</small></td>
+      <td>${escapeHtml(project.presales_stage || project.status)}</td>
+      <td class="gate-cell ${gates.payment_verified ? 'passed' : 'blocked'}">
+        <i class="fas fa-${gates.payment_verified ? 'check-circle' : 'times-circle'}"></i>
+        ${gates.payment_verified ? 'تم التحقق' : 'لم يتم'}
       </td>
-      <td class="gate-cell ${project.gates.dns_verified ? 'passed' : 'blocked'}">
-        ${project.gates.dns_verified ? '✅ تم التحقق' : '❌ لم يتم'}
+      <td class="gate-cell ${gates.dns_verified ? 'passed' : 'blocked'}">
+        <i class="fas fa-${gates.dns_verified ? 'check-circle' : 'times-circle'}"></i>
+        ${gates.dns_verified ? 'تم التحقق' : 'لم يتم'}
       </td>
-      <td class="gate-cell ${project.gates.ssl_verified ? 'passed' : 'blocked'}">
-        ${project.gates.ssl_verified ? '✅ نشط' : '❌ غير نشط'}
+      <td class="gate-cell ${gates.contract_signed ? 'passed' : 'blocked'}">
+        <i class="fas fa-${gates.contract_signed ? 'check-circle' : 'times-circle'}"></i>
+        ${gates.contract_signed ? 'موقّع' : 'غير موقّع'}
       </td>
       <td>
-        ${getGatesStatusBadge(project.gates)}
+        ${getGatesStatusBadge(gates)}
       </td>
     </tr>
-  `).join('');
+  `;
+  }).join('');
 }
 
 // Render Knowledge Base
