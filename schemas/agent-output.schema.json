@@ -23,9 +23,9 @@
           "type": "object",
           "description": "Map of deliverable_name -> filename (all files must exist)",
           "patternProperties": {
-            "^[a-z_]+$": {
+            "^[a-z][a-z0-9_-]*$": {
               "type": "string",
-              "pattern": "^[a-zA-Z0-9_-]+\\.(md|json|yaml|yml|txt|pdf|png|jpg)$"
+              "pattern": "^[a-z0-9][a-z0-9_.-]+\\.(md|json|yaml|yml|txt|pdf|png|jpg|jpeg)$"
             }
           }
         },

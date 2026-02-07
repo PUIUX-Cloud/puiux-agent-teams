@@ -27,10 +27,15 @@ async function runStage(client, stage) {
       `node orchestrator.js --client=${client} --stage=${stage}`
     );
     
-    // Parse result
-    const resultMatch = stdout.match(/ORCHESTRATOR RESULT[\s\S]*?({[\s\S]*?})\s*═/);
-    if (resultMatch) {
-      const result = JSON.parse(resultMatch[1]);
+    // Parse result using markers (more robust than regex)
+    const startMarker = '<<<PIPELINE_JSON_START>>>';
+    const endMarker = '<<<PIPELINE_JSON_END>>>';
+    const startIdx = stdout.indexOf(startMarker);
+    const endIdx = stdout.indexOf(endMarker);
+    
+    if (startIdx !== -1 && endIdx !== -1) {
+      const jsonStr = stdout.substring(startIdx + startMarker.length, endIdx).trim();
+      const result = JSON.parse(jsonStr);
       
       if (result.status === 'success') {
         console.log(`✅ ${stage} completed successfully`);
