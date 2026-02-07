@@ -1,0 +1,107 @@
+name: CI - Agent Teams
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+concurrency:
+  group: agent-teams-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node (22)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install deps (if package.json exists)
+        shell: bash
+        run: |
+          set -e
+          if [ -f package-lock.json ]; then
+            npm ci
+          elif [ -f package.json ]; then
+            npm install
+          else
+            echo "No package.json - skipping npm install"
+          fi
+
+      - name: Smoke - delivery pipeline (demo-acme)
+        shell: bash
+        run: |
+          set -e
+          rm -rf outputs/demo-acme/S2 outputs/demo-acme/S3 || true
+          node pipeline-runner.js --client=demo-acme --pipeline=delivery
+
+      - name: Smoke - delivery pipeline (demo-retail)
+        shell: bash
+        run: |
+          set -e
+          rm -rf outputs/demo-retail/S2 outputs/demo-retail/S3 || true
+          node pipeline-runner.js --client=demo-retail --pipeline=delivery
+
+      - name: Validate outputs exist
+        shell: bash
+        run: |
+          set -e
+          echo "Validating demo-acme outputs..."
+          test -f outputs/demo-acme/S2/coordinator-agent.json || (echo "❌ Missing coordinator JSON" && exit 1)
+          test -f outputs/demo-acme/S3/test-cases.json || (echo "❌ Missing test cases JSON" && exit 1)
+          
+          echo "Validating demo-retail outputs..."
+          test -f outputs/demo-retail/S2/coordinator-agent.json || (echo "❌ Missing coordinator JSON" && exit 1)
+          test -f outputs/demo-retail/S3/test-cases.json || (echo "❌ Missing test cases JSON" && exit 1)
+          
+          echo "✅ All critical outputs exist"
+
+      - name: Validate JSON syntax
+        shell: bash
+        run: |
+          set -e
+          echo "Validating demo-acme JSONs..."
+          jq empty outputs/demo-acme/S2/coordinator-agent.json
+          jq empty outputs/demo-acme/S3/test-cases.json
+          
+          echo "Validating demo-retail JSONs..."
+          jq empty outputs/demo-retail/S2/coordinator-agent.json
+          jq empty outputs/demo-retail/S3/test-cases.json
+          
+          echo "✅ All JSON files valid"
+
+      - name: Validate test case IDs
+        shell: bash
+        run: |
+          set -e
+          echo "Checking test case ID format (TC-API-XXX, TC-UI-XXX)..."
+          
+          acme_api=$(jq -r '.[].id' outputs/demo-acme/S3/test-cases.json | grep -c '^TC-API-' || echo 0)
+          acme_ui=$(jq -r '.[].id' outputs/demo-acme/S3/test-cases.json | grep -c '^TC-UI-' || echo 0)
+          
+          echo "demo-acme: $acme_api API tests, $acme_ui UI tests"
+          
+          if [ "$acme_api" -lt 1 ] || [ "$acme_ui" -lt 1 ]; then
+            echo "❌ Test case IDs invalid"
+            exit 1
+          fi
+          
+          echo "✅ Test case IDs valid"
+
+      - name: Upload outputs artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pipeline-outputs
+          path: outputs/**
+          if-no-files-found: ignore
+          retention-days: 7
