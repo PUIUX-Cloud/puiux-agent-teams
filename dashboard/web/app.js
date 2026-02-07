@@ -28,6 +28,7 @@ async function loadDashboard() {
 // Render all dashboard sections
 function renderDashboard(data) {
   updateSystemStatus(data.system);
+  renderKanbanBoard(data.projects);
   updateQuickStats(data);
   renderProjects(data.projects);
   renderGatesTable(data.projects);
@@ -38,6 +39,142 @@ function renderDashboard(data) {
   
   // Update last update time
   document.getElementById('last-update').textContent = formatTime(data.generated_at);
+}
+
+// Render Kanban Board
+function renderKanbanBoard(projects) {
+  if (!projects || projects.length === 0) {
+    return;
+  }
+
+  // Classify projects by status
+  const classified = {
+    blocked: [],
+    working: [],
+    ready: [],
+    live: []
+  };
+
+  projects.forEach(project => {
+    const status = classifyProject(project);
+    classified[status].push(project);
+  });
+
+  // Render each column
+  renderKanbanColumn('blocked', classified.blocked);
+  renderKanbanColumn('working', classified.working);
+  renderKanbanColumn('ready', classified.ready);
+  renderKanbanColumn('live', classified.live);
+
+  // Update counts
+  document.getElementById('blocked-count').textContent = classified.blocked.length;
+  document.getElementById('working-count').textContent = classified.working.length;
+  document.getElementById('ready-count').textContent = classified.ready.length;
+  document.getElementById('live-count').textContent = classified.live.length;
+}
+
+// Classify project by gates status
+function classifyProject(project) {
+  const gates = project.gates || {};
+  const latestRun = project.latest_run;
+  
+  // Rule: Blocked - any essential gate is false
+  if (!gates.payment_verified || !gates.dns_verified || !gates.contract_signed) {
+    return 'blocked';
+  }
+  
+  // Rule: Live - all gates true + production domain + delivered status
+  const isDelivered = project.status === 'delivered' || 
+                       (latestRun && latestRun.stage && latestRun.stage.match(/prod|s5|delivered/i));
+  const hasProductionDomain = project.domains && project.domains.production && 
+                               !project.domains.production.includes('puiux.cloud');
+  
+  if (gates.payment_verified && gates.dns_verified && isDelivered && hasProductionDomain) {
+    return 'live';
+  }
+  
+  // Rule: Ready - all essential gates true but not live yet
+  if (gates.payment_verified && gates.dns_verified && gates.contract_signed) {
+    return 'ready';
+  }
+  
+  // Rule: Working - everything else (has runs or progress but not blocked)
+  return 'working';
+}
+
+// Render Kanban Column
+function renderKanbanColumn(columnId, projects) {
+  const container = document.getElementById(`${columnId}-cards`);
+  
+  if (!projects || projects.length === 0) {
+    container.innerHTML = '<div class="empty-state" style="padding: 20px; font-size: 13px;">لا توجد مشاريع</div>';
+    return;
+  }
+
+  container.innerHTML = projects.map(project => createKanbanCard(project)).join('');
+}
+
+// Create Kanban Card
+function createKanbanCard(project) {
+  const latestRun = project.latest_run;
+  const gates = project.gates || {};
+  
+  return `
+    <div class="kanban-card">
+      <div class="kanban-card-header">
+        <div class="kanban-card-title">
+          <h4>${escapeHtml(project.name)}</h4>
+          <div class="slug">${escapeHtml(project.slug)}</div>
+        </div>
+        <div class="kanban-card-stage">${escapeHtml(latestRun?.stage || project.presales_stage || project.status)}</div>
+      </div>
+      
+      <div class="kanban-card-gates">
+        <div class="kanban-gate-icon ${gates.payment_verified ? 'passed' : 'blocked'}" title="الدفع">
+          <i class="fas fa-${gates.payment_verified ? 'check' : 'times'}"></i>
+        </div>
+        <div class="kanban-gate-icon ${gates.dns_verified ? 'passed' : 'blocked'}" title="DNS">
+          <i class="fas fa-${gates.dns_verified ? 'check' : 'times'}"></i>
+        </div>
+        <div class="kanban-gate-icon ${gates.contract_signed ? 'passed' : 'blocked'}" title="العقد">
+          <i class="fas fa-${gates.contract_signed ? 'check' : 'times'}"></i>
+        </div>
+        ${gates.ssl_verified !== undefined ? `
+        <div class="kanban-gate-icon ${gates.ssl_verified ? 'passed' : 'blocked'}" title="SSL">
+          <i class="fas fa-${gates.ssl_verified ? 'lock' : 'lock-open'}"></i>
+        </div>
+        ` : ''}
+      </div>
+      
+      <div class="kanban-card-meta">
+        <span>
+          <i class="fas fa-file"></i>
+          ${latestRun?.artifacts_count || 0} ملف
+        </span>
+        <span>
+          <i class="fas fa-clock"></i>
+          ${latestRun ? formatTime(latestRun.timestamp) : '—'}
+        </span>
+      </div>
+      
+      ${project.domains ? `
+      <div class="kanban-card-actions">
+        ${project.domains.beta ? `
+        <a href="https://${escapeHtml(project.domains.beta)}" target="_blank" class="kanban-card-btn">
+          <i class="fas fa-external-link-alt"></i>
+          تجريبي
+        </a>
+        ` : ''}
+        ${project.domains.staging ? `
+        <a href="https://${escapeHtml(project.domains.staging)}" target="_blank" class="kanban-card-btn">
+          <i class="fas fa-external-link-alt"></i>
+          مرحلي
+        </a>
+        ` : ''}
+      </div>
+      ` : ''}
+    </div>
+  `;
 }
 
 // Update system status

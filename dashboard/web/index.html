@@ -27,6 +27,51 @@
     </header>
 
     <main class="container">
+        <!-- Kanban Board -->
+        <section class="kanban-section">
+            <div class="kanban-board">
+                <!-- Blocked Column -->
+                <div class="kanban-column blocked">
+                    <div class="column-header">
+                        <i class="fas fa-ban"></i>
+                        <h3>محجوب</h3>
+                        <span class="count" id="blocked-count">0</span>
+                    </div>
+                    <div class="cards-container" id="blocked-cards"></div>
+                </div>
+
+                <!-- Working Column -->
+                <div class="kanban-column working">
+                    <div class="column-header">
+                        <i class="fas fa-cog fa-spin"></i>
+                        <h3>قيد العمل</h3>
+                        <span class="count" id="working-count">0</span>
+                    </div>
+                    <div class="cards-container" id="working-cards"></div>
+                </div>
+
+                <!-- Ready Column -->
+                <div class="kanban-column ready">
+                    <div class="column-header">
+                        <i class="fas fa-check-circle"></i>
+                        <h3>جاهز</h3>
+                        <span class="count" id="ready-count">0</span>
+                    </div>
+                    <div class="cards-container" id="ready-cards"></div>
+                </div>
+
+                <!-- Live Column -->
+                <div class="kanban-column live">
+                    <div class="column-header">
+                        <i class="fas fa-rocket"></i>
+                        <h3>مباشر</h3>
+                        <span class="count" id="live-count">0</span>
+                    </div>
+                    <div class="cards-container" id="live-cards"></div>
+                </div>
+            </div>
+        </section>
+
         <!-- إحصائيات سريعة -->
         <section class="quick-stats">
             <div class="stat-card">
