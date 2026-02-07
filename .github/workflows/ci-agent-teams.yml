@@ -25,16 +25,28 @@ jobs:
           node-version: "22.22.0"
           cache: "npm"
 
-      - name: Install deps (if package.json exists)
+      - name: Check for lockfile (enforce reproducibility)
+        shell: bash
+        run: |
+          if [ ! -f package-lock.json ]; then
+            echo "⚠️  WARNING: No package-lock.json found"
+            echo "For production safety, consider generating one with 'npm install'"
+            # Note: Not failing for now, but strongly recommended
+          else
+            echo "✅ package-lock.json found"
+          fi
+
+      - name: Install deps
         shell: bash
         run: |
           set -e
           if [ -f package-lock.json ]; then
             npm ci
           elif [ -f package.json ]; then
+            echo "⚠️  Using npm install (not reproducible - consider adding lockfile)"
             npm install
           else
-            echo "No package.json - skipping npm install"
+            echo "ℹ️  No package.json - skipping npm install"
           fi
 
       - name: Smoke - delivery pipeline (demo-acme)
@@ -79,29 +91,89 @@ jobs:
           
           echo "✅ All JSON files valid"
 
-      - name: Validate test case IDs
+      - name: Validate test case IDs (both clients)
         shell: bash
         run: |
           set -e
-          echo "Checking test case ID format (TC-API-XXX, TC-UI-XXX)..."
+          echo "Checking test case ID format for demo-acme..."
           
           acme_api=$(jq -r '.[].id' outputs/demo-acme/S3/test-cases.json | grep -c '^TC-API-' || echo 0)
           acme_ui=$(jq -r '.[].id' outputs/demo-acme/S3/test-cases.json | grep -c '^TC-UI-' || echo 0)
           
-          echo "demo-acme: $acme_api API tests, $acme_ui UI tests"
+          echo "  demo-acme: $acme_api API tests, $acme_ui UI tests"
           
           if [ "$acme_api" -lt 1 ] || [ "$acme_ui" -lt 1 ]; then
-            echo "❌ Test case IDs invalid"
+            echo "❌ demo-acme test case IDs invalid"
             exit 1
           fi
           
-          echo "✅ Test case IDs valid"
+          echo "Checking test case ID format for demo-retail..."
+          
+          retail_api=$(jq -r '.[].id' outputs/demo-retail/S3/test-cases.json | grep -c '^TC-API-' || echo 0)
+          retail_ui=$(jq -r '.[].id' outputs/demo-retail/S3/test-cases.json | grep -c '^TC-UI-' || echo 0)
+          
+          echo "  demo-retail: $retail_api API tests, $retail_ui UI tests"
+          
+          if [ "$retail_api" -lt 1 ] || [ "$retail_ui" -lt 1 ]; then
+            echo "❌ demo-retail test case IDs invalid"
+            exit 1
+          fi
+          
+          echo "✅ All test case IDs valid"
+
+      - name: Check for duplicate test IDs
+        shell: bash
+        run: |
+          set -e
+          echo "Checking for duplicate test IDs in demo-acme..."
+          
+          acme_ids=$(jq -r '.[].id' outputs/demo-acme/S3/test-cases.json | sort)
+          acme_dups=$(echo "$acme_ids" | uniq -d)
+          
+          if [ -n "$acme_dups" ]; then
+            echo "❌ Duplicate test IDs found in demo-acme:"
+            echo "$acme_dups"
+            exit 1
+          fi
+          
+          echo "Checking for duplicate test IDs in demo-retail..."
+          
+          retail_ids=$(jq -r '.[].id' outputs/demo-retail/S3/test-cases.json | sort)
+          retail_dups=$(echo "$retail_ids" | uniq -d)
+          
+          if [ -n "$retail_dups" ]; then
+            echo "❌ Duplicate test IDs found in demo-retail:"
+            echo "$retail_dups"
+            exit 1
+          fi
+          
+          echo "✅ No duplicate test IDs"
+
+      - name: Additional validations (main branch only)
+        if: github.ref == 'refs/heads/main'
+        shell: bash
+        run: |
+          set -e
+          echo "Running additional validations for main branch..."
+          
+          # Check deliverable counts differ between clients
+          acme_deliverables=$(jq '.result.consolidated.total_deliverables' outputs/demo-acme/S2/coordinator-agent.json)
+          retail_deliverables=$(jq '.result.consolidated.total_deliverables' outputs/demo-retail/S2/coordinator-agent.json)
+          
+          echo "  demo-acme deliverables: $acme_deliverables"
+          echo "  demo-retail deliverables: $retail_deliverables"
+          
+          if [ "$acme_deliverables" -eq "$retail_deliverables" ]; then
+            echo "⚠️  WARNING: Both clients have same deliverable count - possible hardcoding?"
+          fi
+          
+          echo "✅ Additional validations complete"
 
       - name: Upload outputs artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: pipeline-outputs
+          name: pipeline-outputs-${{ github.sha }}
           path: outputs/**
           if-no-files-found: ignore
           retention-days: 7
