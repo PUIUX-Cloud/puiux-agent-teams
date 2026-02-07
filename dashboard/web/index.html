@@ -7,6 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -29,60 +30,82 @@
         <!-- إحصائيات سريعة -->
         <section class="quick-stats">
             <div class="stat-card">
-                <h3>إجمالي المشاريع</h3>
-                <div class="stat-value" id="total-projects">-</div>
+                <div class="stat-icon">
+                    <i class="fas fa-folder-open"></i>
+                </div>
+                <div class="stat-content">
+                    <h3>إجمالي المشاريع</h3>
+                    <div class="stat-value" id="total-projects">-</div>
+                </div>
             </div>
             <div class="stat-card">
-                <h3>المشاريع المحجوبة</h3>
-                <div class="stat-value" id="blocked-projects">-</div>
+                <div class="stat-icon blocked">
+                    <i class="fas fa-ban"></i>
+                </div>
+                <div class="stat-content">
+                    <h3>المشاريع المحجوبة</h3>
+                    <div class="stat-value" id="blocked-projects">-</div>
+                </div>
             </div>
             <div class="stat-card">
-                <h3>الوكلاء النشطون</h3>
-                <div class="stat-value" id="active-agents">-</div>
+                <div class="stat-icon active">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <div class="stat-content">
+                    <h3>الوكلاء النشطون</h3>
+                    <div class="stat-value" id="active-agents">-</div>
+                </div>
             </div>
             <div class="stat-card">
-                <h3>ملفات المعرفة</h3>
-                <div class="stat-value" id="kb-files">-</div>
+                <div class="stat-icon info">
+                    <i class="fas fa-book"></i>
+                </div>
+                <div class="stat-content">
+                    <h3>ملفات المعرفة</h3>
+                    <div class="stat-value" id="kb-files">-</div>
+                </div>
             </div>
         </section>
 
         <!-- آخر التشغيلات -->
         <section class="card">
-            <h2>🔄 آخر التشغيلات</h2>
-            <div id="runs-info" class="loading">جاري التحميل...</div>
+            <h2><i class="fas fa-sync-alt"></i> آخر التشغيلات</h2>
+            <div id="runs-info" class="loading"><i class="fas fa-spinner fa-spin"></i> جاري التحميل...</div>
         </section>
 
         <!-- المشاريع -->
         <section class="card">
-            <h2>📂 المشاريع</h2>
-            <div id="projects-container" class="loading">جاري التحميل...</div>
+            <h2><i class="fas fa-folder-open"></i> المشاريع</h2>
+            <div id="projects-container" class="loading"><i class="fas fa-spinner fa-spin"></i> جاري التحميل...</div>
         </section>
 
         <!-- مراقبة البوابات -->
         <section class="card">
-            <h2>🔒 مراقبة البوابات</h2>
-            <table id="gates-table">
-                <thead>
-                    <tr>
-                        <th>المشروع</th>
-                        <th>المرحلة</th>
-                        <th>الدفع</th>
-                        <th>DNS</th>
-                        <th>SSL</th>
-                        <th>الحالة</th>
-                    </tr>
-                </thead>
-                <tbody class="loading">
-                    <tr><td colspan="6">جاري التحميل...</td></tr>
-                </tbody>
-            </table>
+            <h2><i class="fas fa-shield-alt"></i> مراقبة البوابات</h2>
+            <div class="table-container">
+                <table id="gates-table">
+                    <thead>
+                        <tr>
+                            <th><i class="fas fa-project-diagram"></i> المشروع</th>
+                            <th><i class="fas fa-layer-group"></i> المرحلة</th>
+                            <th><i class="fas fa-credit-card"></i> الدفع</th>
+                            <th><i class="fas fa-globe"></i> DNS</th>
+                            <th><i class="fas fa-lock"></i> SSL</th>
+                            <th><i class="fas fa-info-circle"></i> الحالة</th>
+                        </tr>
+                    </thead>
+                    <tbody class="loading">
+                        <tr><td colspan="6"><i class="fas fa-spinner fa-spin"></i> جاري التحميل...</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </section>
 
         <!-- قاعدة المعرفة -->
         <section class="card">
-            <h2>📚 قاعدة المعرفة</h2>
+            <h2><i class="fas fa-book"></i> قاعدة المعرفة</h2>
             <div class="kb-status-row">
-                <span id="kb-status">جاري التحميل...</span>
+                <span id="kb-status"><i class="fas fa-spinner fa-spin"></i> جاري التحميل...</span>
                 <span id="kb-count">-/-</span>
             </div>
             <div class="progress-bar">
@@ -93,21 +116,23 @@
 
         <!-- صحة السجل -->
         <section class="card">
-            <h2>📁 صحة سجل العملاء</h2>
-            <div id="registry-health" class="loading">جاري التحميل...</div>
+            <h2><i class="fas fa-database"></i> صحة سجل العملاء</h2>
+            <div id="registry-health" class="loading"><i class="fas fa-spinner fa-spin"></i> جاري التحميل...</div>
         </section>
 
         <!-- سجل النشاطات -->
         <section class="card">
-            <h2>📝 سجل النشاطات</h2>
-            <div id="activity-log" class="loading">جاري التحميل...</div>
+            <h2><i class="fas fa-history"></i> سجل النشاطات</h2>
+            <div id="activity-log" class="loading"><i class="fas fa-spinner fa-spin"></i> جاري التحميل...</div>
         </section>
     </main>
 
     <footer>
         <div class="container">
-            <p>© 2026 PUIUX - نظام الوكلاء الأذكياء الإصدار 1.0</p>
-            <p class="footnote">آخر تحديث: <span id="last-update">-</span></p>
+            <p><i class="fas fa-copyright"></i> 2026 PUIUX - نظام الوكلاء الأذكياء الإصدار 1.0</p>
+            <p class="footnote">
+                <i class="fas fa-clock"></i> آخر تحديث: <span id="last-update">-</span>
+            </p>
         </div>
     </footer>
 
