@@ -3,67 +3,104 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PUIUX Dashboard</title>
+    <title>PUIUX Agent Teams Dashboard</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <header>
-        <h1>🤖 PUIUX Agent Teams Dashboard</h1>
-        <p class="subtitle">Real-time Monitoring & Status</p>
-        <div class="header-actions">
-            <button onclick="location.reload()">🔄 تحديث</button>
-            <!-- Admin link (protected by network/token) -->
-            <a href="controls.html" class="admin-link" title="Admin only - requires authentication">⚙️ Admin</a>
+        <div class="container">
+            <h1>🤖 PUIUX Agent Teams Dashboard</h1>
+            <div class="system-status">
+                <span class="status-dot" id="status-indicator"></span>
+                <span id="status-text">Loading...</span>
+            </div>
         </div>
     </header>
 
-    <main>
-        <!-- System Status -->
-        <section id="system-status" class="card">
-            <h2>📊 System Status</h2>
-            <div id="system-info" class="loading">جاري التحميل...</div>
-        </section>
-
-        <!-- Knowledge Base -->
-        <section id="kb-progress" class="card">
-            <h2>📚 Knowledge Base Progress</h2>
-            <div id="kb-info" class="loading">جاري التحميل...</div>
-        </section>
-
-        <!-- Client Registry -->
-        <section id="registry-health" class="card">
-            <h2>📁 Client Registry</h2>
-            <div id="registry-info" class="loading">جاري التحميل...</div>
-        </section>
-
-        <!-- Gates Monitor -->
-        <section id="gates-monitor" class="card">
-            <h2>🔒 Gates Monitor</h2>
-            <div id="gates-info" class="loading">جاري التحميث...</div>
-        </section>
-
-        <!-- Agents Status -->
-        <section id="agents-status" class="card">
-            <h2>🤖 Agents Status</h2>
-            <div id="agents-info" class="loading">جاري التحميل...</div>
+    <main class="container">
+        <!-- Quick Stats -->
+        <section class="quick-stats">
+            <div class="stat-card">
+                <h3>Total Projects</h3>
+                <div class="stat-value" id="total-projects">-</div>
+            </div>
+            <div class="stat-card">
+                <h3>Blocked Projects</h3>
+                <div class="stat-value" id="blocked-projects">-</div>
+            </div>
+            <div class="stat-card">
+                <h3>Active Agents</h3>
+                <div class="stat-value" id="active-agents">-</div>
+            </div>
+            <div class="stat-card">
+                <h3>KB Files</h3>
+                <div class="stat-value" id="kb-files">-</div>
+            </div>
         </section>
 
         <!-- Recent Runs -->
-        <section id="recent-runs" class="card">
+        <section class="card">
             <h2>🔄 Recent Runs</h2>
             <div id="runs-info" class="loading">جاري التحميل...</div>
         </section>
 
+        <!-- Projects -->
+        <section class="card">
+            <h2>📂 Projects</h2>
+            <div id="projects-container" class="loading">جاري التحميل...</div>
+        </section>
+
+        <!-- Gates Table -->
+        <section class="card">
+            <h2>🔒 Gates Monitor</h2>
+            <table id="gates-table">
+                <thead>
+                    <tr>
+                        <th>Project</th>
+                        <th>Stage</th>
+                        <th>Payment</th>
+                        <th>DNS</th>
+                        <th>SSL</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody class="loading">
+                    <tr><td colspan="6">جاري التحميل...</td></tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- Knowledge Base -->
+        <section class="card">
+            <h2>📚 Knowledge Base</h2>
+            <div class="kb-status-row">
+                <span id="kb-status">Loading...</span>
+                <span id="kb-count">-/-</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="kb-progress-fill"></div>
+            </div>
+            <div id="kb-files-list" class="kb-files"></div>
+        </section>
+
+        <!-- Registry Health -->
+        <section class="card">
+            <h2>📁 Registry Health</h2>
+            <div id="registry-health" class="loading">جاري التحميل...</div>
+        </section>
+
         <!-- Activity Log -->
-        <section id="activity-log" class="card">
-            <h2>📝 Recent Activity</h2>
-            <div id="activity-info" class="loading">جاري التحميل...</div>
+        <section class="card">
+            <h2>📝 Activity Log</h2>
+            <div id="activity-log" class="loading">جاري التحميل...</div>
         </section>
     </main>
 
     <footer>
-        <p>© 2026 PUIUX - Agent Teams System v1.0</p>
-        <p class="footnote">Auto-refresh every 30 seconds</p>
+        <div class="container">
+            <p>© 2026 PUIUX - Agent Teams System v1.0</p>
+            <p class="footnote">Last update: <span id="last-update">-</span></p>
+        </div>
     </footer>
 
     <script src="app.js"></script>

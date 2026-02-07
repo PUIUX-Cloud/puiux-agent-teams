@@ -36,8 +36,10 @@ async function main() {
   // Generate metrics
   const metrics = generateMetrics(runs, registry, kb);
   
-  // Write metrics.json
-  await fs.writeFile(METRICS_OUTPUT, JSON.stringify(metrics, null, 2));
+  // Write metrics.json (atomic to prevent corruption)
+  const tmpFile = METRICS_OUTPUT + '.tmp';
+  await fs.writeFile(tmpFile, JSON.stringify(metrics, null, 2));
+  await fs.rename(tmpFile, METRICS_OUTPUT);
   console.log(`✅ Dashboard data generated: ${METRICS_OUTPUT}`);
   
   // Print summary
