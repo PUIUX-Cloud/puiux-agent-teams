@@ -107,7 +107,7 @@ function renderKanbanColumn(columnId, projects) {
   const container = document.getElementById(`${columnId}-cards`);
   
   if (!projects || projects.length === 0) {
-    container.innerHTML = '<div class="empty-state" style="padding: 20px; font-size: 13px;">لا توجد مشاريع</div>';
+    container.innerHTML = '<div class="column-empty">—</div>';
     return;
   }
 
@@ -157,22 +157,22 @@ function createKanbanCard(project) {
         </span>
       </div>
       
-      ${project.domains ? `
       <div class="kanban-card-actions">
-        ${project.domains.beta ? `
-        <a href="https://${escapeHtml(project.domains.beta)}" target="_blank" class="kanban-card-btn">
-          <i class="fas fa-external-link-alt"></i>
-          تجريبي
+        ${project.domains?.beta ? `
+        <a href="https://${escapeHtml(project.domains.beta)}" target="_blank" class="kanban-quick-btn" title="فتح النسخة التجريبية">
+          <i class="fas fa-eye"></i>
         </a>
         ` : ''}
-        ${project.domains.staging ? `
-        <a href="https://${escapeHtml(project.domains.staging)}" target="_blank" class="kanban-card-btn">
-          <i class="fas fa-external-link-alt"></i>
-          مرحلي
-        </a>
+        ${latestRun ? `
+        <button class="kanban-quick-btn" title="عرض التفاصيل" onclick="alert('Run ID: ${escapeHtml(latestRun.run_id)}')">
+          <i class="fas fa-info-circle"></i>
+        </button>
         ` : ''}
-      </div>
-      ` : ''}
+        ${latestRun?.artifacts_count ? `
+        <button class="kanban-quick-btn" title="الملفات (${latestRun.artifacts_count})">
+          <i class="fas fa-file-alt"></i>
+        </button>
+        ` : ''}
     </div>
   `;
 }
@@ -309,7 +309,8 @@ function renderGatesTable(projects) {
 
 // Render Knowledge Base
 function renderKnowledgeBase(kb) {
-  const completeFiles = kb.files.filter(f => f.status === 'complete').length;
+  // Treat files without status as complete (from index.json)
+  const completeFiles = kb.files.filter(f => !f.status || f.status === 'complete').length;
   const progress = (completeFiles / kb.total_files) * 100;
   
   document.getElementById('kb-status').textContent = 
@@ -391,7 +392,12 @@ function renderRecentRuns(runs) {
       <tbody>
         ${runs.map(run => `
           <tr class="run-row ${run.status}">
-            <td><code>${escapeHtml(run.run_id)}</code></td>
+            <td>
+              <code class="run-id" title="${escapeHtml(run.run_id)}" onclick="copyToClipboard('${escapeHtml(run.run_id)}')">
+                ${escapeHtml(run.run_id.substring(0, 20))}...
+                <i class="fas fa-copy copy-icon"></i>
+              </code>
+            </td>
             <td>${escapeHtml(run.client_name || run.client)}</td>
             <td><span class="badge">${escapeHtml(run.stage)}</span></td>
             <td><span class="badge ${run.status}">${getRunStatusIcon(run.status)} ${getRunStatusArabic(run.status)}</span></td>
@@ -499,6 +505,20 @@ function formatTime(timestamp) {
 function showError(message) {
   // TODO: Show error notification
   console.error(message);
+}
+
+// Copy to clipboard
+function copyToClipboard(text) {
+  navigator.clipboard.writeText(text).then(() => {
+    // Show brief feedback
+    const toast = document.createElement('div');
+    toast.className = 'copy-toast';
+    toast.textContent = '✓ تم النسخ';
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2000);
+  }).catch(err => {
+    console.error('Copy failed:', err);
+  });
 }
 
 // Auto-refresh
