@@ -148,48 +148,85 @@ class AgentLoader {
 // ═══════════════════════════════════════════════════════════════
 
 class GateChecker {
+  constructor(logger) {
+    this.logger = logger;
+  }
+
+  /**
+   * Load gates from client-specific gates.json
+   */
+  async loadGates(clientSlug) {
+    const gatesPath = path.join(__dirname, `../client-${clientSlug}/gates.json`);
+    
+    try {
+      const gatesContent = await fs.readFile(gatesPath, 'utf8');
+      const gates = JSON.parse(gatesContent);
+      if (this.logger) {
+        this.logger.debug('Gates loaded', { client: clientSlug, gates });
+      }
+      return gates;
+    } catch (error) {
+      if (this.logger) {
+        this.logger.warn('Gates file not found, using defaults', { client: clientSlug });
+      }
+      // Default: all gates blocked
+      return {
+        payment_verified: false,
+        dns_verified: false,
+        contract_signed: false,
+        proposal_approved: false,
+        qa_passed: false
+      };
+    }
+  }
+
   /**
    * Check if gates are satisfied for stage transition
    */
   async checkGates(client, fromStage, toStage) {
-    const gates = {
+    // Load gates from client-specific file
+    const gates = await this.loadGates(client.slug);
+
+    const gateRules = {
       'PS3_TO_PS4': {
         required: ['proposal_approved'],
-        check: (c) => c.presales?.proposal_approved === true
+        check: (g) => g.proposal_approved === true
       },
       'PS4_TO_PS5': {
-        required: ['contract_signed', 'deposit_received'],
-        check: (c) => c.billing?.payment_verified === true
+        required: ['contract_signed', 'payment_verified'],
+        check: (g) => g.contract_signed === true && g.payment_verified === true
       },
       'PS5_TO_S0': {
-        required: ['handoff_complete'],
-        check: (c) => c.presales?.handoff_complete === true
+        required: ['payment_verified'],
+        check: (g) => g.payment_verified === true
       },
       'S4_TO_S5': {
         required: ['qa_passed', 'staging_approved'],
-        check: (c) => c.qa?.all_tests_passed === true
+        check: (g) => g.qa_passed === true && g.staging_approved === true
       },
       'S5_PRODUCTION': {
-        required: ['payment_verified', 'dns_verified'],
-        check: (c) => c.billing?.payment_verified === true && 
-                     c.ops?.dns_verified === true
+        required: ['payment_verified', 'dns_verified', 'qa_passed'],
+        check: (g) => g.payment_verified === true && 
+                     g.dns_verified === true &&
+                     g.qa_passed === true
       }
     };
 
     const gateName = `${fromStage}_TO_${toStage}`;
-    const gate = gates[gateName];
+    const rule = gateRules[gateName];
 
-    if (!gate) {
+    if (!rule) {
       return { passed: true, reason: 'No gate defined' };
     }
 
-    const passed = gate.check(client);
+    const passed = rule.check(gates);
     
     return {
       passed,
       gate: gateName,
-      required: gate.required,
-      reason: passed ? 'Gate passed' : `Missing: ${gate.required.join(', ')}`
+      required: rule.required,
+      gates_state: gates,
+      reason: passed ? 'Gate passed' : `Missing: ${rule.required.filter(r => !gates[r]).join(', ')}`
     };
   }
 }
@@ -255,9 +292,9 @@ class SecureLogger {
 class Orchestrator {
   constructor(config) {
     this.config = config;
-    this.loader = new AgentLoader(config.agentsDir);
-    this.gateChecker = new GateChecker();
     this.logger = new SecureLogger(config.logLevel);
+    this.loader = new AgentLoader(config.agentsDir);
+    this.gateChecker = new GateChecker(this.logger);
   }
 
   /**
@@ -483,8 +520,9 @@ class Orchestrator {
         issues,
         next_steps
       },
-      tokens_used: 5000,
-      cost_usd: 0.10
+      // Real metrics (MVP: unknown until LLM integration)
+      tokens_used: null,
+      cost_usd: null
     };
   }
 
@@ -530,8 +568,8 @@ ${result.result.next_steps.map((s, i) => `${i + 1}. [ ] ${s}`).join('\n') || '- 
 
 ## Metadata
 - Execution Time: ${result.metadata?.execution_time_ms || 0}ms
-- Tokens Used: ${result.tokens_used || 0}
-- Cost: $${(result.cost_usd || 0).toFixed(2)}
+- Tokens Used: ${result.tokens_used !== null ? result.tokens_used : 'Unknown (MVP)'}
+- Cost: ${result.cost_usd !== null ? `$${result.cost_usd.toFixed(2)}` : 'Unknown (MVP)'}
 
 ---
 
