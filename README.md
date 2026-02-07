@@ -75,7 +75,48 @@ All outputs saved to `outputs/{client-slug}/{stage}/`:
 ```
 outputs/demo-acme/PS0/
 ├── presales-agent.json    # Structured data
-└── presales-agent.md      # Human-readable summary
+├── presales-agent.md      # Human-readable report
+└── run.json               # Run manifest (SSOT for Dashboard)
+```
+
+**run.json** includes:
+- Run ID, client, stage, status, timestamp
+- All artifacts generated
+- Gates status snapshot
+- Agents executed (name, status, version)
+- Metrics (tokens, cost, artifact count)
+
+---
+
+## Dashboard
+
+### Live Monitoring
+
+Open `dashboard/web/index.html` to view:
+- **Recent Runs**: Latest pipeline executions with status
+- **Gates Monitor**: Payment/DNS/Contract verification status
+- **System Status**: Active agents, total clients, KB files
+- **Activity Log**: Real-time execution events
+
+### How It Works
+
+1. **orchestrator.js** generates `run.json` after each execution
+2. **generate-dashboard-data.js** aggregates all `run.json` files into `dashboard/state/metrics.json`
+3. **Dashboard UI** reads `metrics.json` and auto-refreshes every 30s
+
+### Manual Refresh
+
+```bash
+node scripts/generate-dashboard-data.js
+```
+
+**Output:**
+```
+🔍 Scanning for run.json files...
+✅ Found 4 runs
+✅ Loaded registry: 2 clients
+✅ Loaded KB: 9 files
+✅ Dashboard data generated
 ```
 
 ---
