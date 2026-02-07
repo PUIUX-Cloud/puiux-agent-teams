@@ -371,9 +371,18 @@ class Orchestrator {
       const promises = agents.map(agent => this.executeAgent(agent, client, stage));
       const parallelResults = await Promise.all(promises);
       results.push(...parallelResults);
+
+      // 5. After parallel execution, run coordinator if available
+      if (stage === 'S2' || agents.length > 1) {
+        this.logger.info('Running coordinator consolidation', { stage });
+        const coordinatorResult = await this.runCoordinator(client, stage, parallelResults);
+        if (coordinatorResult) {
+          results.push(coordinatorResult);
+        }
+      }
     }
 
-    // 5. Consolidate results
+    // 6. Consolidate results
     const consolidatedResult = this.consolidateResults(results, stage, client);
 
     this.logger.info('Stage execution complete', { 
@@ -382,6 +391,222 @@ class Orchestrator {
     });
 
     return consolidatedResult;
+  }
+
+  /**
+   * Run coordinator to consolidate parallel agent outputs
+   */
+  async runCoordinator(client, stage, agentResults) {
+    try {
+      const coordinator = await this.loader.loadAgent('meta', 'coordinator-agent');
+      
+      this.logger.info('Coordinator consolidating outputs', { 
+        stage, 
+        agents_count: agentResults.length 
+      });
+
+      // Prepare context with outputs from all agents
+      const context = {
+        client: client,
+        stage,
+        agent_outputs: agentResults,
+        kb_path: path.join(__dirname, this.config.kbPath)
+      };
+
+      // Execute coordinator
+      const startTime = Date.now();
+      const consolidatedResult = await this.executeCoordinatorLogic(coordinator, context);
+
+      // Save consolidated outputs
+      const outputsDir = path.join(__dirname, 'outputs', client.slug, stage);
+      await fs.mkdir(outputsDir, { recursive: true });
+
+      const jsonPath = path.join(outputsDir, 'coordinator-agent.json');
+      await fs.writeFile(jsonPath, JSON.stringify(consolidatedResult, null, 2));
+
+      const mdPath = path.join(outputsDir, 'coordinator-agent.md');
+      const mdContent = this.generateCoordinatorMarkdown(consolidatedResult, client, stage, agentResults);
+      await fs.writeFile(mdPath, mdContent);
+
+      const executionTime = Date.now() - startTime;
+
+      this.logger.info('Coordinator consolidation complete', { 
+        stage,
+        outputs: [jsonPath, mdPath],
+        execution_time_ms: executionTime
+      });
+
+      return {
+        agent: 'coordinator-agent',
+        version: '1.0',
+        timestamp: new Date().toISOString(),
+        client: client.slug,
+        stage,
+        status: 'success',
+        result: consolidatedResult.result,
+        outputs: {
+          json: jsonPath,
+          markdown: mdPath
+        },
+        metadata: {
+          execution_time_ms: executionTime,
+          agents_consolidated: agentResults.length
+        }
+      };
+    } catch (error) {
+      this.logger.error('Coordinator failed', { error: error.message });
+      return null;
+    }
+  }
+
+  /**
+   * Execute coordinator logic (consolidate outputs)
+   */
+  async executeCoordinatorLogic(coordinator, context) {
+    const { stage, agent_outputs } = context;
+
+    // Collect all deliverables, decisions, issues
+    const allDeliverables = {};
+    const allDecisions = [];
+    const allIssues = [];
+    const allNextSteps = [];
+
+    agent_outputs.forEach(output => {
+      // Merge deliverables
+      Object.assign(allDeliverables, output.result.deliverables || {});
+      
+      // Collect decisions
+      if (output.result.decisions) {
+        allDecisions.push(...output.result.decisions.map(d => ({
+          agent: output.agent,
+          decision: d
+        })));
+      }
+
+      // Collect issues
+      if (output.result.issues && output.result.issues.length > 0) {
+        allIssues.push(...output.result.issues.map(i => ({
+          agent: output.agent,
+          issue: i
+        })));
+      }
+
+      // Collect next steps
+      if (output.result.next_steps) {
+        allNextSteps.push(...output.result.next_steps.map(s => ({
+          agent: output.agent,
+          action: s
+        })));
+      }
+    });
+
+    // Identify conflicts (simplified for MVP)
+    const conflicts = [];
+    // TODO: Real conflict detection logic
+
+    // Assign owners
+    const actionItems = allNextSteps.map((item, idx) => ({
+      id: `${stage}-${idx + 1}`,
+      action: item.action,
+      owner: item.agent,
+      priority: 'medium',
+      status: 'pending'
+    }));
+
+    return {
+      status: 'success',
+      result: {
+        summary: `Consolidated outputs from ${agent_outputs.length} agents for stage ${stage}`,
+        deliverables: {
+          consolidated_brief: 'consolidated-brief.md',
+          next_actions: 'next-actions.md',
+          blockers: allIssues.length > 0 ? 'blockers.md' : null,
+          owners: 'owners.json'
+        },
+        consolidated: {
+          total_deliverables: Object.keys(allDeliverables).length,
+          total_decisions: allDecisions.length,
+          total_issues: allIssues.length,
+          total_actions: actionItems.length,
+          conflicts: conflicts.length,
+          all_deliverables: allDeliverables,
+          all_decisions: allDecisions,
+          all_issues: allIssues,
+          action_items: actionItems
+        },
+        decisions: [
+          `Consolidated ${agent_outputs.length} agent outputs`,
+          `Identified ${actionItems.length} action items`,
+          conflicts.length > 0 ? `Found ${conflicts.length} conflicts` : 'No conflicts detected'
+        ],
+        issues: allIssues,
+        next_steps: actionItems.map(a => `[${a.owner}] ${a.action}`)
+      }
+    };
+  }
+
+  /**
+   * Generate coordinator markdown summary
+   */
+  generateCoordinatorMarkdown(result, client, stage, agentResults) {
+    const { consolidated } = result.result;
+
+    return `# Coordinator Consolidation - ${client.name || client.slug} - ${stage}
+
+**Date:** ${new Date().toISOString().split('T')[0]}  
+**Status:** ✅ Success  
+**Agents Consolidated:** ${agentResults.length}
+
+---
+
+## Summary
+${result.result.summary}
+
+---
+
+## Consolidated Metrics
+- **Deliverables:** ${consolidated.total_deliverables}
+- **Decisions Made:** ${consolidated.total_decisions}
+- **Issues Identified:** ${consolidated.total_issues}
+- **Action Items:** ${consolidated.total_actions}
+- **Conflicts:** ${consolidated.conflicts}
+
+---
+
+## All Deliverables
+${Object.entries(consolidated.all_deliverables).map(([key, val]) => 
+  `- ${key}: ${val}`).join('\n') || '- No deliverables'}
+
+---
+
+## Decisions by Agent
+${consolidated.all_decisions.map((d, i) => 
+  `${i + 1}. [${d.agent}] ${d.decision}`).join('\n') || '- No decisions'}
+
+---
+
+## Issues & Blockers
+${consolidated.all_issues.map(i => 
+  `- [${i.agent}] ${i.issue}`).join('\n') || '- No issues'}
+
+---
+
+## Action Items with Owners
+${consolidated.action_items.map(a => 
+  `- [ ] **[${a.owner}]** ${a.action} (Priority: ${a.priority})`).join('\n') || '- No actions'}
+
+---
+
+## Next Steps
+1. Review consolidated brief
+2. Assign action items to team members
+3. Resolve any blockers
+4. Proceed to next stage
+
+---
+
+_Generated by PUIUX Coordinator Agent_
+`;
   }
 
   /**
@@ -504,15 +729,54 @@ class Orchestrator {
         deliverables.wireframes = 'wireframes.pdf';
         deliverables.design_system = 'design-system.md';
         decisions.push('Created 10 key screens');
+      } else if (agent.name.includes('frontend')) {
+        deliverables.component_structure = 'component-structure.md';
+        deliverables.state_management = 'state-management.md';
+        decisions.push('Selected React with Redux');
       } else if (agent.name.includes('backend')) {
         deliverables.api_spec = 'api-spec.yaml';
         deliverables.db_schema = 'database-schema.sql';
         decisions.push('Designed 15 API endpoints');
       }
+    } else if (stage === 'S3') {
+      // QA reads S2 coordinator output
+      const s2OutputPath = path.join(__dirname, 'outputs', client.slug, 'S2', 'coordinator-agent.json');
+      let s2Data = null;
+      
+      try {
+        const s2Content = await fs.readFile(s2OutputPath, 'utf8');
+        s2Data = JSON.parse(s2Content);
+      } catch (error) {
+        issues.push({
+          severity: 'critical',
+          description: 'S2 outputs not found - cannot create test plan',
+          recommendation: 'Run S2 stage first'
+        });
+      }
+
+      if (s2Data) {
+        const consolidated = s2Data.result?.consolidated || {};
+        const totalDeliverables = consolidated.total_deliverables || 0;
+        const totalActions = consolidated.total_actions || 0;
+
+        deliverables.test_plan = 'test-plan.md';
+        deliverables.acceptance_criteria = 'acceptance-criteria.md';
+        deliverables.edge_cases = 'edge-cases.md';
+        deliverables.security_checklist = 'security-checklist.md';
+
+        decisions.push(`Created test plan covering ${totalDeliverables} deliverables`);
+        decisions.push(`Defined acceptance criteria for ${totalActions} action items`);
+        decisions.push('Identified 15 edge cases');
+        decisions.push('OWASP top 10 security checklist prepared');
+
+        next_steps.push('Review test plan with team');
+        next_steps.push('Set up test automation framework');
+        next_steps.push('Execute test cases');
+      }
     }
 
     return {
-      status: 'success',
+      status: issues.some(i => i.severity === 'critical') ? 'blocked' : 'success',
       result: {
         summary,
         deliverables,
