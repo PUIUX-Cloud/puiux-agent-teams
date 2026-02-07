@@ -3,6 +3,14 @@
 const METRICS_URL = '../state/metrics.json';
 const REFRESH_INTERVAL = 30000; // 30 seconds
 
+// XSS Protection
+function escapeHtml(text) {
+  if (!text) return '';
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
 // Load and render dashboard
 async function loadDashboard() {
   try {
@@ -66,7 +74,7 @@ function renderProjects(projects) {
   container.innerHTML = projects.map(project => `
     <div class="project-card">
       <div class="project-header">
-        <h3>${project.name}</h3>
+        <h3>${escapeHtml(project.name)}</h3>
         <span class="badge ${project.status}">${getStatusArabic(project.status)}</span>
       </div>
       
@@ -168,10 +176,10 @@ function renderKnowledgeBase(kb) {
   
   const filesList = document.getElementById('kb-files-list');
   filesList.innerHTML = kb.files.map(file => `
-    <div class="kb-file ${file.status}">
-      <span class="file-status">${file.status === 'complete' ? '✅' : '⏳'}</span>
-      <span class="file-name">${file.name}</span>
-      <span class="file-date">${file.last_updated}</span>
+    <div class="kb-file ${file.status || 'complete'}">
+      <span class="file-status">${(file.status === 'complete' || !file.status) ? '✅' : '⏳'}</span>
+      <span class="file-name">${escapeHtml(file.title || file.name || file.id || '—')}</span>
+      <span class="file-date">${file.last_updated || '—'}</span>
     </div>
   `).join('');
 }
@@ -240,9 +248,9 @@ function renderRecentRuns(runs) {
       <tbody>
         ${runs.map(run => `
           <tr class="run-row ${run.status}">
-            <td><code>${run.run_id}</code></td>
-            <td>${run.client_name || run.client}</td>
-            <td><span class="badge">${run.stage}</span></td>
+            <td><code>${escapeHtml(run.run_id)}</code></td>
+            <td>${escapeHtml(run.client_name || run.client)}</td>
+            <td><span class="badge">${escapeHtml(run.stage)}</span></td>
             <td><span class="badge ${run.status}">${getRunStatusIcon(run.status)} ${getRunStatusArabic(run.status)}</span></td>
             <td>${run.artifacts_count} ملف</td>
             <td>${formatTime(run.timestamp)}</td>
@@ -265,8 +273,8 @@ function renderActivityLog(log) {
   container.innerHTML = log.slice(0, 20).map(entry => `
     <div class="log-entry ${entry.type}">
       <span class="log-time">${formatTime(entry.timestamp)}</span>
-      <span class="log-type">[${entry.type}]</span>
-      <span class="log-message">${entry.message}</span>
+      <span class="log-type">[${escapeHtml(entry.type)}]</span>
+      <span class="log-message">${escapeHtml(entry.message)}</span>
     </div>
   `).join('');
 }

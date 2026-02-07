@@ -184,12 +184,14 @@ function generateMetrics(runs, registry, kb) {
     cost_usd: run.metrics?.cost_usd || null
   }));
   
-  // Build activity log from runs
-  const activityLog = runs.slice(0, 20).map(run => ({
-    timestamp: run.timestamp,
-    type: run.status,
-    message: `${run.client_name} - ${run.stage} - ${run.status} (${run.artifacts?.length || 0} artifacts)`
-  }));
+  // Build activity log from runs (with fallback for empty)
+  const activityLog = runs.length > 0 
+    ? runs.slice(0, 20).map(run => ({
+        timestamp: run.timestamp,
+        type: run.status,
+        message: `${run.client_name} - ${run.stage} - ${run.status} (${run.artifacts?.length || 0} artifacts)`
+      }))
+    : []; // Empty array if no runs
   
   // Calculate totals
   const totalArtifacts = runs.reduce((sum, r) => sum + (r.artifacts?.length || 0), 0);
