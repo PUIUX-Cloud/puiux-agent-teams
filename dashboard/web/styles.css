@@ -680,12 +680,13 @@ table thead {
 
 table th {
   text-align: right;
-  padding: 14px;
+  padding: 14px 12px;
   font-weight: 600;
   font-size: 13px;
   text-transform: uppercase;
   letter-spacing: 0.6px;
   white-space: nowrap;
+  vertical-align: middle;
 }
 
 table th i {
@@ -695,14 +696,24 @@ table th i {
 }
 
 table td {
-  padding: 14px;
+  padding: 14px 12px;
   border-bottom: 1px solid #E0E0E0;
   font-size: 14px;
+  text-align: right;
+  vertical-align: middle;
 }
 
 table td i {
-  margin-left: 4px;
-  font-size: 13px;
+  margin-left: 6px;
+  font-size: 14px;
+}
+
+table td:first-child {
+  text-align: right;
+}
+
+table td:last-child {
+  text-align: center;
 }
 
 table tbody tr {
@@ -716,6 +727,13 @@ table tbody tr:hover {
 
 .gate-cell {
   font-weight: 600;
+  white-space: nowrap;
+}
+
+.gate-cell i {
+  font-size: 16px;
+  margin-left: 6px;
+  vertical-align: middle;
 }
 
 .gate-cell.passed {
