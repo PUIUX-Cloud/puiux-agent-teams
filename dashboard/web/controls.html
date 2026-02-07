@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PUIUX Dashboard - Controls</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .auth-screen {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .auth-box {
+      background: white;
+      padding: 40px;
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+      max-width: 400px;
+      width: 100%;
+    }
+    
+    .auth-box h2 {
+      margin-bottom: 24px;
+      color: #1a202c;
+    }
+    
+    .auth-box input {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e2e8f0;
+      border-radius: 6px;
+      font-size: 16px;
+      margin-bottom: 16px;
+    }
+    
+    .auth-box button {
+      width: 100%;
+      padding: 12px;
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    
+    .auth-box button:hover {
+      background: #5568d3;
+    }
+    
+    .error-message {
+      background: #fff5f5;
+      color: #c53030;
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 16px;
+      display: none;
+    }
+    
+    .controls-container {
+      display: none;
+    }
+    
+    .control-card {
+      background: white;
+      border: 2px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .control-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid #e2e8f0;
+    }
+    
+    .control-actions {
+      display: grid;
+      gap: 12px;
+    }
+    
+    .action-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      background: #f7fafc;
+      border-radius: 6px;
+    }
+    
+    .action-label {
+      flex: 1;
+      font-weight: 600;
+      color: #4a5568;
+    }
+    
+    .toggle-switch {
+      position: relative;
+      width: 60px;
+      height: 30px;
+      background: #cbd5e0;
+      border-radius: 15px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    
+    .toggle-switch.active {
+      background: #48bb78;
+    }
+    
+    .toggle-switch::after {
+      content: '';
+      position: absolute;
+      width: 26px;
+      height: 26px;
+      background: white;
+      border-radius: 50%;
+      top: 2px;
+      right: 2px;
+      transition: transform 0.3s;
+    }
+    
+    .toggle-switch.active::after {
+      transform: translateX(-30px);
+    }
+    
+    .btn-action {
+      padding: 8px 16px;
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    
+    .btn-action:hover {
+      background: #5568d3;
+    }
+    
+    .btn-action:disabled {
+      background: #cbd5e0;
+      cursor: not-allowed;
+    }
+    
+    .btn-danger {
+      background: #e74c3c;
+    }
+    
+    .btn-danger:hover {
+      background: #c0392b;
+    }
+    
+    .stage-select {
+      padding: 8px;
+      border: 2px solid #e2e8f0;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  
+  <!-- Auth Screen -->
+  <div id="auth-screen" class="auth-screen">
+    <div class="auth-box">
+      <h2>🔒 Admin Access</h2>
+      <div id="error-message" class="error-message"></div>
+      <form id="auth-form">
+        <input 
+          type="password" 
+          id="admin-token" 
+          placeholder="أدخل Admin Token" 
+          required
+          autocomplete="off"
+        >
+        <button type="submit">دخول</button>
+      </form>
+      <p style="text-align: center; margin-top: 16px; color: #718096; font-size: 14px;">
+        <a href="index.html" style="color: #667eea;">← العودة للعرض</a>
+      </p>
+    </div>
+  </div>
+
+  <!-- Controls Screen -->
+  <div id="controls-container" class="controls-container">
+    
+    <header>
+      <div class="container">
+        <h1>🔧 PUIUX Dashboard - Controls</h1>
+        <div class="system-status">
+          <span class="badge success">Admin Mode</span>
+          <a href="index.html" style="color: white; margin-right: 20px;">📊 View Dashboard</a>
+          <button id="logout-btn" style="background: rgba(255,255,255,0.2); border: none; padding: 8px 16px; border-radius: 6px; color: white; cursor: pointer;">Logout</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="container">
+      
+      <section class="section">
+        <h2>🎛️ Project Controls</h2>
+        <div id="controls-list">
+          <!-- Controls will be loaded here -->
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>📝 Recent Actions</h2>
+        <div id="recent-actions" class="activity-log">
+          <!-- Recent actions will be shown here -->
+        </div>
+      </section>
+
+    </main>
+
+    <footer>
+      <div class="container">
+        <p>© 2026 PUIUX - Admin Controls v1.0.0</p>
+      </div>
+    </footer>
+
+  </div>
+
+  <script src="controls.js"></script>
+</body>
+</html>

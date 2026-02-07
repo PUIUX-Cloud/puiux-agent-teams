@@ -8,7 +8,7 @@
 
 ### **Access Dashboard:**
 
-**Web UI:**
+**Web UI (View Only):**
 ```bash
 # Open in browser
 open dashboard/web/index.html
@@ -17,6 +17,25 @@ open dashboard/web/index.html
 cd dashboard/web
 python3 -m http.server 8080
 # Then open: http://localhost:8080
+```
+
+**Admin Controls:**
+```bash
+# Serve dashboard
+cd dashboard/web
+python3 -m http.server 8080
+
+# Open controls (requires admin token)
+open http://localhost:8080/controls.html
+```
+
+**Admin Token:**
+```bash
+# Set in environment
+export ADMIN_DASHBOARD_TOKEN="your-secure-token-here"
+
+# Or generate a random one
+export ADMIN_DASHBOARD_TOKEN=$(openssl rand -hex 32)
 ```
 
 ### **Features:**
@@ -209,14 +228,90 @@ ls ../../client-projects-registry/
 
 ---
 
+## 🔧 Admin Controls
+
+### **Access:**
+1. Navigate to `controls.html` in browser
+2. Enter admin token
+3. Control projects in real-time
+
+### **Available Actions:**
+
+**Gates Control:**
+- ✅ Toggle `payment_verified`
+- ✅ Toggle `dns_verified`
+- ✅ Toggle `ssl_verified`
+
+**Project Management:**
+- ✅ Change presales stage (PS0 → PS5)
+- ✅ Pause/Resume project
+- ✅ Archive project
+
+**Deployment:**
+- ⏳ Deploy to Staging (queued for future)
+- ⏳ Deploy to Production (queued for future)
+
+### **How It Works:**
+
+**Current (Queue-based):**
+1. Admin performs action in UI
+2. Action queued in `actions.queue.json`
+3. Run `process-actions.sh` to execute
+4. Registry updated + logged in `activity.log`
+
+**Run manually:**
+```bash
+./dashboard/process-actions.sh
+```
+
+**Or set up cron:**
+```bash
+# Process actions every 5 minutes
+*/5 * * * * /path/to/dashboard/process-actions.sh >> /var/log/puiux-actions.log 2>&1
+```
+
+### **Security:**
+
+**Admin-only:**
+- Requires `ADMIN_DASHBOARD_TOKEN`
+- Token stored in localStorage
+- All actions logged
+
+**Future:**
+- Multi-role support (admin, manager, finance, sales)
+- API endpoints (see `dashboard/API.md`)
+- Real-time validation
+
+---
+
+## 📝 Activity Log
+
+All admin actions are logged:
+```
+dashboard/state/activity.log
+```
+
+Format:
+```json
+{"timestamp":"2026-02-07T18:47:00Z","type":"admin_action","message":"demo-acme: payment_verified set to true"}
+```
+
+View in:
+- `controls.html` → Recent Actions
+- `cat dashboard/state/activity.log`
+
+---
+
 ## TODO
 
 - [ ] Agents implementation
 - [ ] Teams orchestration
 - [ ] Real-time WebSocket updates
-- [ ] Deploy integration
+- [ ] Deploy integration (staging + production)
 - [ ] Notification system
+- [ ] API endpoints for controls
+- [ ] Multi-role authentication
 
 ---
 
-_Dashboard MVP v1.0.0 - Essential monitoring for PUIUX Agent Teams_
+_Dashboard MVP v1.0.0 - Admin Controls Added_
