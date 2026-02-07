@@ -1,0 +1,59 @@
+#!/bin/bash
+# Pre-commit hook to prevent committing secrets
+# Install: ln -s ../../.githooks/pre-commit .git/hooks/pre-commit
+
+echo "🔒 Checking for secrets in staged files..."
+
+# Patterns to detect (same as redaction script)
+patterns=(
+  "ghp_[A-Za-z0-9_]{36,255}"
+  "github_pat_[A-Za-z0-9_]{36,255}"
+  "gho_[A-Za-z0-9_]{36,255}"
+  "ghu_[A-Za-z0-9_]{36,255}"
+  "ghs_[A-Za-z0-9_]{36,255}"
+  "ghr_[A-Za-z0-9_]{36,255}"
+  "AKIA[0-9A-Z]{16}"
+  "sk-[A-Za-z0-9]{32,64}"
+  "AIza[0-9A-Za-z_-]{35}"
+)
+
+# Get staged files
+staged_files=$(git diff --cached --name-only --diff-filter=ACM)
+
+if [ -z "$staged_files" ]; then
+  echo "✅ No staged files"
+  exit 0
+fi
+
+# Check each pattern
+found_secrets=false
+
+for pattern in "${patterns[@]}"; do
+  # Search in staged content
+  matches=$(git diff --cached -U0 | grep -E "$pattern" || true)
+  
+  if [ -n "$matches" ]; then
+    echo "❌ DANGER: Potential secret detected!"
+    echo "   Pattern: $pattern"
+    echo "   Matches:"
+    echo "$matches" | head -3
+    echo ""
+    found_secrets=true
+  fi
+done
+
+if $found_secrets; then
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo "🚨 COMMIT BLOCKED - Secrets detected!"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo ""
+  echo "Please remove secrets before committing:"
+  echo "  1. Remove the secret from the file"
+  echo "  2. Use environment variables instead"
+  echo "  3. If false positive, use --no-verify (CAREFUL!)"
+  echo ""
+  exit 1
+fi
+
+echo "✅ No secrets detected - safe to commit"
+exit 0

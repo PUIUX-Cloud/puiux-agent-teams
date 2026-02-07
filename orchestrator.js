@@ -12,6 +12,7 @@
 
 const fs = require('fs').promises;
 const path = require('path');
+const { redactSecrets } = require('./scripts/redact-secrets');
 
 // ═══════════════════════════════════════════════════════════════
 // Configuration
@@ -314,19 +315,30 @@ class SecureLogger {
 
   /**
    * Redact sensitive data before logging
+   * Uses pattern matching for tokens + key-based redaction
    */
   redact(data) {
+    // Handle strings - apply pattern-based redaction
+    if (typeof data === 'string') {
+      return redactSecrets(data);
+    }
+    
+    // Handle non-objects
     if (typeof data !== 'object' || data === null) {
       return data;
     }
 
     const redacted = JSON.parse(JSON.stringify(data)); // Deep clone
-    const sensitiveKeys = ['password', 'token', 'secret', 'key', 'credential', 'api_key'];
+    const sensitiveKeys = ['password', 'token', 'secret', 'key', 'credential', 'api_key', 'auth'];
 
     const redactObject = (obj) => {
       for (const key in obj) {
+        // Check if key indicates a secret
         if (sensitiveKeys.some(s => key.toLowerCase().includes(s))) {
           obj[key] = '[REDACTED]';
+        } else if (typeof obj[key] === 'string') {
+          // Apply pattern-based redaction to string values
+          obj[key] = redactSecrets(obj[key]);
         } else if (typeof obj[key] === 'object' && obj[key] !== null) {
           redactObject(obj[key]);
         }
