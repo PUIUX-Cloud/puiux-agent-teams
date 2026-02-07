@@ -3,7 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PUIUX Agent Teams Dashboard</title>
+    <title>لوحة تحكم PUIUX Agent Teams</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -11,62 +14,62 @@
         <div class="container">
             <div class="header-left">
                 <div class="logo-container">
-                    <img src="https://puiux.com/wp-content/uploads/2021/09/Logo-Black-Copress.svg" alt="PUIUX Logo">
+                    <img src="https://puiux.com/wp-content/uploads/2021/09/Logo-Black-Copress.svg" alt="شعار PUIUX">
                 </div>
-                <h1>Agent Teams Dashboard</h1>
+                <h1>لوحة تحكم الوكلاء الأذكياء</h1>
             </div>
             <div class="system-status">
                 <span class="status-dot" id="status-indicator"></span>
-                <span id="status-text">Loading...</span>
+                <span id="status-text">جاري التحميل...</span>
             </div>
         </div>
     </header>
 
     <main class="container">
-        <!-- Quick Stats -->
+        <!-- إحصائيات سريعة -->
         <section class="quick-stats">
             <div class="stat-card">
-                <h3>Total Projects</h3>
+                <h3>إجمالي المشاريع</h3>
                 <div class="stat-value" id="total-projects">-</div>
             </div>
             <div class="stat-card">
-                <h3>Blocked Projects</h3>
+                <h3>المشاريع المحجوبة</h3>
                 <div class="stat-value" id="blocked-projects">-</div>
             </div>
             <div class="stat-card">
-                <h3>Active Agents</h3>
+                <h3>الوكلاء النشطون</h3>
                 <div class="stat-value" id="active-agents">-</div>
             </div>
             <div class="stat-card">
-                <h3>KB Files</h3>
+                <h3>ملفات المعرفة</h3>
                 <div class="stat-value" id="kb-files">-</div>
             </div>
         </section>
 
-        <!-- Recent Runs -->
+        <!-- آخر التشغيلات -->
         <section class="card">
-            <h2>🔄 Recent Runs</h2>
+            <h2>🔄 آخر التشغيلات</h2>
             <div id="runs-info" class="loading">جاري التحميل...</div>
         </section>
 
-        <!-- Projects -->
+        <!-- المشاريع -->
         <section class="card">
-            <h2>📂 Projects</h2>
+            <h2>📂 المشاريع</h2>
             <div id="projects-container" class="loading">جاري التحميل...</div>
         </section>
 
-        <!-- Gates Table -->
+        <!-- مراقبة البوابات -->
         <section class="card">
-            <h2>🔒 Gates Monitor</h2>
+            <h2>🔒 مراقبة البوابات</h2>
             <table id="gates-table">
                 <thead>
                     <tr>
-                        <th>Project</th>
-                        <th>Stage</th>
-                        <th>Payment</th>
+                        <th>المشروع</th>
+                        <th>المرحلة</th>
+                        <th>الدفع</th>
                         <th>DNS</th>
                         <th>SSL</th>
-                        <th>Status</th>
+                        <th>الحالة</th>
                     </tr>
                 </thead>
                 <tbody class="loading">
@@ -75,11 +78,11 @@
             </table>
         </section>
 
-        <!-- Knowledge Base -->
+        <!-- قاعدة المعرفة -->
         <section class="card">
-            <h2>📚 Knowledge Base</h2>
+            <h2>📚 قاعدة المعرفة</h2>
             <div class="kb-status-row">
-                <span id="kb-status">Loading...</span>
+                <span id="kb-status">جاري التحميل...</span>
                 <span id="kb-count">-/-</span>
             </div>
             <div class="progress-bar">
@@ -88,23 +91,23 @@
             <div id="kb-files-list" class="kb-files"></div>
         </section>
 
-        <!-- Registry Health -->
+        <!-- صحة السجل -->
         <section class="card">
-            <h2>📁 Registry Health</h2>
+            <h2>📁 صحة سجل العملاء</h2>
             <div id="registry-health" class="loading">جاري التحميل...</div>
         </section>
 
-        <!-- Activity Log -->
+        <!-- سجل النشاطات -->
         <section class="card">
-            <h2>📝 Activity Log</h2>
+            <h2>📝 سجل النشاطات</h2>
             <div id="activity-log" class="loading">جاري التحميل...</div>
         </section>
     </main>
 
     <footer>
         <div class="container">
-            <p>© 2026 PUIUX - Agent Teams System v1.0</p>
-            <p class="footnote">Last update: <span id="last-update">-</span></p>
+            <p>© 2026 PUIUX - نظام الوكلاء الأذكياء الإصدار 1.0</p>
+            <p class="footnote">آخر تحديث: <span id="last-update">-</span></p>
         </div>
     </footer>
 

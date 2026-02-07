@@ -39,10 +39,10 @@ function updateSystemStatus(system) {
   
   if (system.status === 'operational') {
     indicator.className = 'status-dot operational';
-    text.textContent = 'Operational';
+    text.textContent = 'النظام يعمل';
   } else {
     indicator.className = 'status-dot error';
-    text.textContent = 'Error';
+    text.textContent = 'خطأ';
   }
 }
 
@@ -72,20 +72,20 @@ function renderProjects(projects) {
       
       <div class="project-info">
         <div class="info-row">
-          <span class="label">Slug:</span>
+          <span class="label">المعرّف:</span>
           <span>${project.slug}</span>
         </div>
         <div class="info-row">
-          <span class="label">Pod:</span>
+          <span class="label">المجموعة:</span>
           <span>${project.pod}</span>
         </div>
         <div class="info-row">
-          <span class="label">Tier:</span>
-          <span>${project.tier}</span>
+          <span class="label">الفئة:</span>
+          <span>${getTierArabic(project.tier)}</span>
         </div>
         ${project.presales_stage ? `
         <div class="info-row">
-          <span class="label">Stage:</span>
+          <span class="label">المرحلة:</span>
           <span>${project.presales_stage}</span>
         </div>
         ` : ''}
@@ -93,33 +93,33 @@ function renderProjects(projects) {
       
       <div class="project-gates">
         <div class="gate ${project.gates.payment_verified ? 'passed' : 'blocked'}">
-          ${project.gates.payment_verified ? '✅' : '❌'} Payment
+          ${project.gates.payment_verified ? '✅' : '❌'} الدفع
         </div>
         <div class="gate ${project.gates.dns_verified ? 'passed' : 'blocked'}">
-          ${project.gates.dns_verified ? '✅' : '❌'} DNS
+          ${project.gates.dns_verified ? '✅' : '❌'} النطاق
         </div>
         <div class="gate ${project.gates.ssl_verified ? 'passed' : 'blocked'}">
-          ${project.gates.ssl_verified ? '✅' : '❌'} SSL
+          ${project.gates.ssl_verified ? '✅' : '❌'} الشهادة
         </div>
       </div>
       
       ${project.blocked_reason ? `
       <div class="blocked-reason">
-        <strong>⛔ Blocked:</strong> ${project.blocked_reason}
+        <strong>⛔ محجوب:</strong> ${getBlockedReasonArabic(project.blocked_reason)}
       </div>
       ` : ''}
       
       <div class="project-domains">
         <div class="domain-row">
-          <span class="domain-label">Beta:</span>
+          <span class="domain-label">تجريبي:</span>
           <a href="https://${project.domains.beta}" target="_blank">${project.domains.beta}</a>
         </div>
         <div class="domain-row">
-          <span class="domain-label">Staging:</span>
+          <span class="domain-label">مرحلي:</span>
           <a href="https://${project.domains.staging}" target="_blank">${project.domains.staging}</a>
         </div>
         <div class="domain-row production">
-          <span class="domain-label">Production:</span>
+          <span class="domain-label">إنتاج:</span>
           <span class="production-domain">${project.domains.production}</span>
         </div>
       </div>
@@ -141,13 +141,13 @@ function renderGatesTable(projects) {
       <td><strong>${project.name}</strong><br><small>${project.slug}</small></td>
       <td>${project.presales_stage || project.status}</td>
       <td class="gate-cell ${project.gates.payment_verified ? 'passed' : 'blocked'}">
-        ${project.gates.payment_verified ? '✅ Verified' : '❌ Not Verified'}
+        ${project.gates.payment_verified ? '✅ تم التحقق' : '❌ لم يتم'}
       </td>
       <td class="gate-cell ${project.gates.dns_verified ? 'passed' : 'blocked'}">
-        ${project.gates.dns_verified ? '✅ Verified' : '❌ Not Verified'}
+        ${project.gates.dns_verified ? '✅ تم التحقق' : '❌ لم يتم'}
       </td>
       <td class="gate-cell ${project.gates.ssl_verified ? 'passed' : 'blocked'}">
-        ${project.gates.ssl_verified ? '✅ Active' : '❌ Not Active'}
+        ${project.gates.ssl_verified ? '✅ نشط' : '❌ غير نشط'}
       </td>
       <td>
         ${getGatesStatusBadge(project.gates)}
@@ -162,7 +162,7 @@ function renderKnowledgeBase(kb) {
   const progress = (completeFiles / kb.total_files) * 100;
   
   document.getElementById('kb-status').textContent = 
-    completeFiles === kb.total_files ? '✅ Complete' : '⏳ In Progress';
+    completeFiles === kb.total_files ? '✅ مكتمل' : '⏳ قيد الإنجاز';
   document.getElementById('kb-count').textContent = `${completeFiles}/${kb.total_files}`;
   document.getElementById('kb-progress-fill').style.width = progress + '%';
   
@@ -182,34 +182,34 @@ function renderRegistryHealth(registry) {
   
   container.innerHTML = `
     <div class="health-row">
-      <span class="health-label">Status:</span>
+      <span class="health-label">الحالة:</span>
       <span class="${registry.valid ? 'status-good' : 'status-bad'}">
-        ${registry.valid ? '✅ Valid' : '❌ Invalid'}
+        ${registry.valid ? '✅ صحيح' : '❌ غير صحيح'}
       </span>
     </div>
     <div class="health-row">
-      <span class="health-label">Total Clients:</span>
+      <span class="health-label">إجمالي العملاء:</span>
       <span>${registry.total_clients}</span>
     </div>
     <div class="health-row">
-      <span class="health-label">By Status:</span>
+      <span class="health-label">حسب الحالة:</span>
       <span>
-        Presales: ${registry.by_status.presales}, 
-        Active: ${registry.by_status.active}, 
-        Delivered: ${registry.by_status.delivered}
+        مبيعات: ${registry.by_status.presales}، 
+        نشط: ${registry.by_status.active}، 
+        مسلّم: ${registry.by_status.delivered}
       </span>
     </div>
     <div class="health-row">
-      <span class="health-label">By Tier:</span>
+      <span class="health-label">حسب الفئة:</span>
       <span>
-        Beta: ${registry.by_tier.beta}, 
-        Standard: ${registry.by_tier.standard}, 
-        Premium: ${registry.by_tier.premium}
+        تجريبي: ${registry.by_tier.beta}، 
+        قياسي: ${registry.by_tier.standard}، 
+        مميز: ${registry.by_tier.premium}
       </span>
     </div>
     ${registry.duplicates.length > 0 ? `
     <div class="health-row error">
-      <span class="health-label">⚠️ Duplicates:</span>
+      <span class="health-label">⚠️ مكررات:</span>
       <span>${registry.duplicates.join(', ')}</span>
     </div>
     ` : ''}
@@ -229,12 +229,12 @@ function renderRecentRuns(runs) {
     <table class="runs-table">
       <thead>
         <tr>
-          <th>Run ID</th>
-          <th>Client</th>
-          <th>Stage</th>
-          <th>Status</th>
-          <th>Artifacts</th>
-          <th>Timestamp</th>
+          <th>معرّف التشغيل</th>
+          <th>العميل</th>
+          <th>المرحلة</th>
+          <th>الحالة</th>
+          <th>الملفات</th>
+          <th>التوقيت</th>
         </tr>
       </thead>
       <tbody>
@@ -243,8 +243,8 @@ function renderRecentRuns(runs) {
             <td><code>${run.run_id}</code></td>
             <td>${run.client_name || run.client}</td>
             <td><span class="badge">${run.stage}</span></td>
-            <td><span class="badge ${run.status}">${getRunStatusIcon(run.status)} ${run.status}</span></td>
-            <td>${run.artifacts_count} files</td>
+            <td><span class="badge ${run.status}">${getRunStatusIcon(run.status)} ${getRunStatusArabic(run.status)}</span></td>
+            <td>${run.artifacts_count} ملف</td>
             <td>${formatTime(run.timestamp)}</td>
           </tr>
         `).join('')}
@@ -290,9 +290,27 @@ function getGatesStatus(gates) {
 
 function getGatesStatusBadge(gates) {
   if (gates.payment_verified && gates.dns_verified) {
-    return '<span class="badge success">✅ Ready</span>';
+    return '<span class="badge success">✅ جاهز</span>';
   }
-  return '<span class="badge blocked">⛔ Blocked</span>';
+  return '<span class="badge blocked">⛔ محجوب</span>';
+}
+
+function getTierArabic(tier) {
+  const map = {
+    'beta': 'تجريبي',
+    'standard': 'قياسي',
+    'premium': 'مميز',
+    'enterprise': 'مؤسسات'
+  };
+  return map[tier] || tier;
+}
+
+function getBlockedReasonArabic(reason) {
+  if (!reason) return '';
+  return reason
+    .replace('Payment not verified', 'الدفع غير مؤكد')
+    .replace('DNS not verified', 'النطاق غير مؤكد')
+    .replace('Contract not signed', 'العقد غير موقّع');
 }
 
 function getRunStatusIcon(status) {
@@ -303,6 +321,16 @@ function getRunStatusIcon(status) {
     'running': '⏳'
   };
   return icons[status] || '❓';
+}
+
+function getRunStatusArabic(status) {
+  const map = {
+    'success': 'نجح',
+    'failed': 'فشل',
+    'blocked': 'محجوب',
+    'running': 'قيد التشغيل'
+  };
+  return map[status] || status;
 }
 
 function formatTime(timestamp) {
