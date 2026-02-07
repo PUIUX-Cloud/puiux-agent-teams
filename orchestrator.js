@@ -27,6 +27,27 @@ const CONFIG = {
 };
 
 // ═══════════════════════════════════════════════════════════════
+// Gate Policy (Production-grade enforcement)
+// ═══════════════════════════════════════════════════════════════
+
+const GATE_POLICY = {
+  presales: {
+    // PS0-PS4: Always allowed (part of sales process)
+    allow: ['PS0', 'PS1', 'PS2', 'PS3', 'PS4'],
+    // PS5: Invoice & Payment Verification - requires contract
+    require_contract: ['PS5']
+  },
+  delivery: {
+    // S0-S5: All require payment verification
+    require_payment: ['S0', 'S1', 'S2', 'S3', 'S4', 'S5']
+  },
+  production: {
+    // Production deployment requires all gates
+    require_all: ['DEPLOY', 'PROD', 'RELEASE', 'PRODUCTION']
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════
 // Agent Loader
 // ═══════════════════════════════════════════════════════════════
 
@@ -154,80 +175,162 @@ class GateChecker {
   }
 
   /**
-   * Load gates from client-specific gates.json
+   * Load gates from client-specific gates.json or registry
    */
   async loadGates(clientSlug) {
-    const gatesPath = path.join(__dirname, `../client-${clientSlug}/gates.json`);
+    // Try client-specific gates.json first (in fixtures)
+    const fixturesGatesPath = path.join(__dirname, 'clients', clientSlug, 'gates.json');
     
     try {
-      const gatesContent = await fs.readFile(gatesPath, 'utf8');
+      const gatesContent = await fs.readFile(fixturesGatesPath, 'utf8');
       const gates = JSON.parse(gatesContent);
       if (this.logger) {
-        this.logger.debug('Gates loaded', { client: clientSlug, gates });
+        this.logger.debug('Gates loaded from fixtures', { client: clientSlug, gates });
       }
       return gates;
     } catch (error) {
-      if (this.logger) {
-        this.logger.warn('Gates file not found, using defaults', { client: clientSlug });
+      // Fallback: try registry
+      try {
+        const registryPath = path.join(__dirname, '..', 'client-projects-registry', 'clients.json');
+        const registryContent = await fs.readFile(registryPath, 'utf8');
+        const registry = JSON.parse(registryContent);
+        const client = registry.clients.find(c => c.slug === clientSlug);
+        
+        if (client && client.gates) {
+          if (this.logger) {
+            this.logger.debug('Gates loaded from registry', { client: clientSlug, gates: client.gates });
+          }
+          return client.gates;
+        }
+      } catch (regError) {
+        // Ignore
       }
-      // Default: all gates blocked
+      
+      if (this.logger) {
+        this.logger.warn('Gates not found, using blocked defaults', { client: clientSlug });
+      }
+      
+      // Default: all gates blocked (fail-safe)
       return {
         payment_verified: false,
         dns_verified: false,
         contract_signed: false,
-        proposal_approved: false,
-        qa_passed: false
+        ssl_verified: false
       };
     }
   }
 
   /**
-   * Check if gates are satisfied for stage transition
+   * Normalize stage name for comparison
+   */
+  normalizeStage(stage) {
+    return String(stage || '').toUpperCase().trim();
+  }
+
+  /**
+   * Determine stage family
+   */
+  stageFamily(stage) {
+    const stageNorm = this.normalizeStage(stage);
+    
+    if (stageNorm.startsWith('PS')) return 'presales';
+    if (stageNorm.startsWith('S')) return 'delivery';
+    if (['DEPLOY', 'PROD', 'PRODUCTION', 'RELEASE'].includes(stageNorm)) return 'production';
+    
+    return 'unknown';
+  }
+
+  /**
+   * Check required gates
+   */
+  requireGates(gates, requiredKeys) {
+    const missing = requiredKeys.filter(k => !gates?.[k]);
+    
+    if (missing.length > 0) {
+      return {
+        passed: false,
+        reason: `⛔ لا يمكن تشغيل المرحلة. البوابات المطلوبة: ${missing.join(', ')}`,
+        missing,
+        commercial_message: this.getCommercialMessage(missing)
+      };
+    }
+    
+    return { passed: true };
+  }
+
+  /**
+   * Get commercial-friendly error message
+   */
+  getCommercialMessage(missingGates) {
+    const messages = {
+      payment_verified: 'يرجى إتمام الدفع أولاً. تواصل مع قسم المالية.',
+      dns_verified: 'يرجى توثيق النطاق أولاً. تواصل مع قسم التقنية.',
+      contract_signed: 'يرجى توقيع العقد أولاً. تواصل مع قسم المبيعات.',
+      ssl_verified: 'يرجى تفعيل شهادة SSL أولاً. تواصل مع قسم التقنية.'
+    };
+    
+    return missingGates.map(gate => messages[gate] || `Missing: ${gate}`).join('\n');
+  }
+
+  /**
+   * Check gates for stage execution (production-grade enforcement)
    */
   async checkGates(client, fromStage, toStage) {
-    // Load gates from client-specific file
+    const stage = toStage || fromStage;
+    const stageNorm = this.normalizeStage(stage);
+    const family = this.stageFamily(stageNorm);
+    
+    // Load gates
     const gates = await this.loadGates(client.slug);
-
-    const gateRules = {
-      'PS3_TO_PS4': {
-        required: ['proposal_approved'],
-        check: (g) => g.proposal_approved === true
-      },
-      'PS4_TO_PS5': {
-        required: ['contract_signed', 'payment_verified'],
-        check: (g) => g.contract_signed === true && g.payment_verified === true
-      },
-      'PS5_TO_S0': {
-        required: ['payment_verified'],
-        check: (g) => g.payment_verified === true
-      },
-      'S4_TO_S5': {
-        required: ['qa_passed', 'staging_approved'],
-        check: (g) => g.qa_passed === true && g.staging_approved === true
-      },
-      'S5_PRODUCTION': {
-        required: ['payment_verified', 'dns_verified', 'qa_passed'],
-        check: (g) => g.payment_verified === true && 
-                     g.dns_verified === true &&
-                     g.qa_passed === true
+    
+    this.logger.info('Gate check', { 
+      client: client.slug, 
+      stage: stageNorm, 
+      family,
+      gates 
+    });
+    
+    let decision = { passed: true };
+    
+    // Apply policy based on stage family
+    if (family === 'presales') {
+      // PS0-PS4: Always allowed
+      if (GATE_POLICY.presales.allow.includes(stageNorm)) {
+        decision = { passed: true, reason: 'Presales stage - always allowed' };
       }
-    };
-
-    const gateName = `${fromStage}_TO_${toStage}`;
-    const rule = gateRules[gateName];
-
-    if (!rule) {
-      return { passed: true, reason: 'No gate defined' };
+      // PS5: Requires contract
+      else if (GATE_POLICY.presales.require_contract.includes(stageNorm)) {
+        decision = this.requireGates(gates, ['contract_signed']);
+      }
+    } 
+    else if (family === 'delivery') {
+      // S0-S5: All require payment
+      decision = this.requireGates(gates, ['payment_verified']);
+    } 
+    else if (family === 'production') {
+      // Production: Requires payment + DNS + SSL
+      decision = this.requireGates(gates, ['payment_verified', 'dns_verified', 'ssl_verified']);
     }
-
-    const passed = rule.check(gates);
+    
+    if (!decision.passed) {
+      this.logger.warn('Gate check FAILED', { 
+        client: client.slug, 
+        stage: stageNorm, 
+        reason: decision.reason,
+        missing: decision.missing
+      });
+    } else {
+      this.logger.info('Gate check PASSED', { 
+        client: client.slug, 
+        stage: stageNorm 
+      });
+    }
     
     return {
-      passed,
-      gate: gateName,
-      required: rule.required,
-      gates_state: gates,
-      reason: passed ? 'Gate passed' : `Missing: ${rule.required.filter(r => !gates[r]).join(', ')}`
+      ...decision,
+      stage: stageNorm,
+      family,
+      gates_state: gates
     };
   }
 }
@@ -411,19 +514,50 @@ class Orchestrator {
     // 1. Load client
     const client = await this.loadClient(clientSlug);
 
-    // 2. Check gates (if moving to new stage)
-    if (client.current_stage !== stage) {
-      const gateResult = await this.gateChecker.checkGates(client, client.current_stage, stage);
+    // 2. CHECK GATES (production-grade enforcement)
+    const gateResult = await this.gateChecker.checkGates(client, client.current_stage, stage);
+    
+    if (!gateResult.passed) {
+      this.logger.error('❌ Gate check BLOCKED', {
+        client: clientSlug,
+        stage,
+        reason: gateResult.reason,
+        missing: gateResult.missing
+      });
       
-      if (!gateResult.passed) {
-        this.logger.error('Gate check failed', gateResult);
-        return {
-          status: 'blocked',
-          reason: gateResult.reason,
-          gate: gateResult.gate
-        };
-      }
+      // Write blocked run manifest (important for visibility!)
+      const blockedResult = {
+        run_id: `${stage}-${clientSlug}-${Date.now()}`,
+        stage,
+        client: clientSlug,
+        client_name: client.name,
+        status: 'blocked',
+        reason: gateResult.reason,
+        commercial_message: gateResult.commercial_message,
+        missing_gates: gateResult.missing,
+        gates_state: gateResult.gates_state,
+        timestamp: new Date().toISOString(),
+        artifacts: [],
+        agents: []
+      };
+      
+      // Save blocked manifest
+      await this.writeBlockedRunManifest(blockedResult, client, stage);
+      
+      // Log activity
+      await this.appendActivityLog({
+        type: 'blocked',
+        timestamp: new Date().toISOString(),
+        message: `${client.name} حاول تشغيل ${stage} واتمنع: ${gateResult.reason}`
+      });
+      
+      // Update dashboard
+      await this.updateDashboard();
+      
+      return blockedResult;
     }
+    
+    this.logger.info('✅ Gate check PASSED', { client: clientSlug, stage });
 
     // 3. Load agents for stage
     const agents = await this.loader.getAgentsForStage(stage);
@@ -1430,6 +1564,38 @@ _Generated by PUIUX Agent Teams_
   }
 
   /**
+   * Write blocked run manifest (when gates prevent execution)
+   * Important: This makes blocked attempts visible in Dashboard
+   */
+  async writeBlockedRunManifest(blockedResult, client, stage) {
+    const outputsDir = path.join(__dirname, 'outputs', client.slug, stage);
+    await fs.mkdir(outputsDir, { recursive: true });
+    
+    const runPath = path.join(outputsDir, 'run.json');
+    await fs.writeFile(runPath, JSON.stringify(blockedResult, null, 2));
+    
+    this.logger.info('Blocked run manifest saved', { path: runPath });
+  }
+
+  /**
+   * Append to activity log (dashboard/state/activity.log)
+   */
+  async appendActivityLog(entry) {
+    const activityPath = path.join(__dirname, 'dashboard', 'state', 'activity.log');
+    
+    // Ensure directory exists
+    await fs.mkdir(path.dirname(activityPath), { recursive: true });
+    
+    const logLine = JSON.stringify(entry) + '\n';
+    
+    try {
+      await fs.appendFile(activityPath, logLine);
+    } catch (error) {
+      this.logger.warn('Failed to append activity log', { error: error.message });
+    }
+  }
+
+  /**
    * Generate run manifest (run.json) for each pipeline execution
    * This is the Single Source of Truth for the Dashboard
    * 
@@ -1513,6 +1679,13 @@ _Generated by PUIUX Agent Teams_
     // Write manifest
     const manifestPath = path.join(outputsDir, 'run.json');
     await fs.writeFile(manifestPath, JSON.stringify(manifest, null, 2));
+    
+    // Log to activity
+    await this.appendActivityLog({
+      type: manifest.status,
+      timestamp: manifest.timestamp,
+      message: `${client.name} - ${stage} - ${manifest.status} (${artifacts.length} artifacts)`
+    });
 
     this.logger.info('Run manifest generated', {
       path: manifestPath,

@@ -1,15 +1,15 @@
 {
-  "generated_at": "2026-02-07T22:57:59.233Z",
+  "generated_at": "2026-02-07T23:18:50.398Z",
   "system": {
     "status": "operational",
     "version": "1.0",
     "uptime": null
   },
   "runs_summary": {
-    "total": 4,
-    "successful": 4,
+    "total": 5,
+    "successful": 3,
     "failed": 0,
-    "blocked": 0
+    "blocked": 2
   },
   "gates_summary": {
     "total": 2,
@@ -201,11 +201,11 @@
         "contract_signed": false
       },
       "latest_run": {
-        "run_id": "PS0-demo-acme-1770498061787",
-        "stage": "PS0",
-        "status": "success",
-        "timestamp": "2026-02-07T21:01:01.787Z",
-        "artifacts_count": 3
+        "run_id": "PS5-demo-acme-1770506309868",
+        "stage": "PS5",
+        "status": "blocked",
+        "timestamp": "2026-02-07T23:18:29.868Z",
+        "artifacts_count": 0
       },
       "blocked_reason": "Payment not verified, DNS not verified, Contract not signed"
     },
@@ -239,14 +239,38 @@
   ],
   "recent_runs": [
     {
-      "run_id": "PS0-demo-acme-1770498061787",
+      "run_id": "PS5-demo-acme-1770506309868",
+      "client": "demo-acme",
+      "client_name": "ACME Corporation (Demo)",
+      "stage": "PS5",
+      "status": "blocked",
+      "timestamp": "2026-02-07T23:18:29.868Z",
+      "artifacts_count": 0,
+      "agents_count": 0,
+      "tokens_used": null,
+      "cost_usd": null
+    },
+    {
+      "run_id": "PS0-demo-acme-1770506304112",
       "client": "demo-acme",
       "client_name": "ACME Corporation (Demo)",
       "stage": "PS0",
       "status": "success",
-      "timestamp": "2026-02-07T21:01:01.787Z",
-      "artifacts_count": 3,
+      "timestamp": "2026-02-07T23:18:24.112Z",
+      "artifacts_count": 4,
       "agents_count": 1,
+      "tokens_used": null,
+      "cost_usd": null
+    },
+    {
+      "run_id": "S2-demo-acme-1770506294181",
+      "client": "demo-acme",
+      "client_name": "ACME Corporation (Demo)",
+      "stage": "S2",
+      "status": "blocked",
+      "timestamp": "2026-02-07T23:18:14.181Z",
+      "artifacts_count": 0,
+      "agents_count": 0,
       "tokens_used": null,
       "cost_usd": null
     },
@@ -273,25 +297,23 @@
       "agents_count": 4,
       "tokens_used": null,
       "cost_usd": null
-    },
-    {
-      "run_id": "S2-demo-acme-1770496887094",
-      "client": "demo-acme",
-      "client_name": "ACME Corporation (Demo)",
-      "stage": "S2",
-      "status": "success",
-      "timestamp": "2026-02-07T20:41:27.094Z",
-      "artifacts_count": 14,
-      "agents_count": 4,
-      "tokens_used": null,
-      "cost_usd": null
     }
   ],
   "activity_log": [
     {
-      "timestamp": "2026-02-07T21:01:01.787Z",
+      "timestamp": "2026-02-07T23:18:29.868Z",
+      "type": "blocked",
+      "message": "ACME Corporation (Demo) - PS5 - blocked (0 artifacts)"
+    },
+    {
+      "timestamp": "2026-02-07T23:18:24.112Z",
       "type": "success",
-      "message": "ACME Corporation (Demo) - PS0 - success (3 artifacts)"
+      "message": "ACME Corporation (Demo) - PS0 - success (4 artifacts)"
+    },
+    {
+      "timestamp": "2026-02-07T23:18:14.181Z",
+      "type": "blocked",
+      "message": "ACME Corporation (Demo) - S2 - blocked (0 artifacts)"
     },
     {
       "timestamp": "2026-02-07T20:41:45.756Z",
@@ -302,16 +324,11 @@
       "timestamp": "2026-02-07T20:41:45.715Z",
       "type": "success",
       "message": "RetailPro Solutions (Demo) - S2 - success (14 artifacts)"
-    },
-    {
-      "timestamp": "2026-02-07T20:41:27.094Z",
-      "type": "success",
-      "message": "ACME Corporation (Demo) - S2 - success (14 artifacts)"
     }
   ],
   "metrics": {
-    "total_runs": 4,
-    "total_artifacts": 37,
+    "total_runs": 5,
+    "total_artifacts": 24,
     "total_tokens": null,
     "total_cost_usd": null
   }

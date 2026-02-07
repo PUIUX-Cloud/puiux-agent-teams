@@ -1,1 +1,4 @@
 {"timestamp":"2026-02-07T18:47:00Z","type":"system","message":"Activity log initialized"}
+{"type":"blocked","timestamp":"2026-02-07T23:18:14.182Z","message":"ACME Corporation (Demo) حاول تشغيل S2 واتمنع: ⛔ لا يمكن تشغيل المرحلة. البوابات المطلوبة: payment_verified"}
+{"type":"success","timestamp":"2026-02-07T23:18:24.112Z","message":"ACME Corporation (Demo) - PS0 - success (4 artifacts)"}
+{"type":"blocked","timestamp":"2026-02-07T23:18:29.869Z","message":"ACME Corporation (Demo) حاول تشغيل PS5 واتمنع: ⛔ لا يمكن تشغيل المرحلة. البوابات المطلوبة: contract_signed"}
