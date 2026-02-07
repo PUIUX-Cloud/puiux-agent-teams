@@ -6,6 +6,10 @@
     "validate:schemas": "npm run validate:metrics && npm run validate:runs",
     "validate:metrics": "ajv validate -s schemas/metrics.schema.json -d dashboard/state/metrics.json",
     "validate:runs": "find outputs -name 'run.json' -exec ajv validate -s schemas/run.schema.json -d {} \\;",
+    "notify:test": "node scripts/notify-webhook.js --type=blocked --client=test-client --stage=S2 --status=blocked --reason='Test notification' --missing-gates='payment_verified' --commercial-message='يرجى إتمام الدفع' --run-id='TEST-123' --timestamp='2026-02-08T00:00:00Z'",
+    "notify:test-failed": "node scripts/notify-webhook.js --type=failed --client=test-client --stage=S2 --status=failed --reason='Agent execution failed' --run-id='TEST-456' --artifacts-count=0",
+    "notify:test-production": "node scripts/notify-webhook.js --type=production --client=test-client --stage=DEPLOY --status=success --run-id='TEST-789' --artifacts-count=42",
+    "summary": "node scripts/daily-summary.js",
     "test": "npm run validate:schemas"
   },
   "dependencies": {
@@ -13,7 +17,6 @@
   },
   "devDependencies": {
     "ajv": "^8.17.1",
-    "ajv-cli": "^5.0.0",
-    "ajv-formats": "^3.0.1"
+    "ajv-cli": "^5.0.0"
   }
 }
