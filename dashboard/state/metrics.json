@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-02-07T21:01:01.824Z",
+  "generated_at": "2026-02-07T22:57:59.233Z",
   "system": {
     "status": "operational",
     "version": "1.0",
@@ -197,7 +197,8 @@
       "gates": {
         "payment_verified": false,
         "dns_verified": false,
-        "ssl_verified": false
+        "ssl_verified": false,
+        "contract_signed": false
       },
       "latest_run": {
         "run_id": "PS0-demo-acme-1770498061787",
@@ -223,7 +224,8 @@
       "gates": {
         "payment_verified": false,
         "dns_verified": false,
-        "ssl_verified": false
+        "ssl_verified": false,
+        "contract_signed": false
       },
       "latest_run": {
         "run_id": "S3-demo-retail-1770496905756",

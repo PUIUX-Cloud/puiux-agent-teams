@@ -272,39 +272,108 @@ function renderProjects(projects) {
   `).join('');
 }
 
-// Render gates table
+// Render gates monitor (Visual)
 function renderGatesTable(projects) {
-  const tbody = document.querySelector('#gates-table tbody');
+  const container = document.getElementById('gates-monitor');
   
   if (!projects || projects.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" class="empty-state">لا توجد مشاريع</td></tr>';
+    container.innerHTML = '<div class="empty-state">لا توجد مشاريع</div>';
+    container.classList.remove('loading');
     return;
   }
   
-  tbody.innerHTML = projects.map(project => {
+  container.innerHTML = projects.map(project => {
     const gates = project.gates || {};
+    const allPassed = gates.payment_verified && gates.dns_verified && gates.contract_signed;
+    
     return `
-    <tr class="${getGatesStatus(gates)}">
-      <td><strong>${escapeHtml(project.name)}</strong><br><small>${escapeHtml(project.slug)}</small></td>
-      <td>${escapeHtml(project.presales_stage || project.status)}</td>
-      <td class="gate-cell ${gates.payment_verified ? 'passed' : 'blocked'}">
-        <i class="fas fa-${gates.payment_verified ? 'check-circle' : 'times-circle'}"></i>
-        ${gates.payment_verified ? 'تم التحقق' : 'لم يتم'}
-      </td>
-      <td class="gate-cell ${gates.dns_verified ? 'passed' : 'blocked'}">
-        <i class="fas fa-${gates.dns_verified ? 'check-circle' : 'times-circle'}"></i>
-        ${gates.dns_verified ? 'تم التحقق' : 'لم يتم'}
-      </td>
-      <td class="gate-cell ${gates.contract_signed ? 'passed' : 'blocked'}">
-        <i class="fas fa-${gates.contract_signed ? 'check-circle' : 'times-circle'}"></i>
-        ${gates.contract_signed ? 'موقّع' : 'غير موقّع'}
-      </td>
-      <td>
-        ${getGatesStatusBadge(gates)}
-      </td>
-    </tr>
-  `;
+      <div class="gate-card ${allPassed ? 'all-passed' : 'blocked'}">
+        <div class="gate-card-header">
+          <div class="gate-card-title">
+            <h4>${escapeHtml(project.name)}</h4>
+            <span class="gate-slug">${escapeHtml(project.slug)}</span>
+          </div>
+          <div class="gate-card-badge ${allPassed ? 'success' : 'danger'}">
+            <i class="fas fa-${allPassed ? 'check-circle' : 'exclamation-circle'}"></i>
+            ${allPassed ? 'جميع البوابات مفتوحة' : 'محجوب'}
+          </div>
+        </div>
+        
+        <div class="gates-grid">
+          <div class="gate-item ${gates.payment_verified ? 'passed' : 'blocked'}">
+            <div class="gate-icon">
+              <i class="fas fa-${gates.payment_verified ? 'check' : 'times'}"></i>
+            </div>
+            <div class="gate-info">
+              <div class="gate-label">
+                <i class="fas fa-credit-card"></i>
+                الدفع
+              </div>
+              <div class="gate-status">
+                ${gates.payment_verified ? 'تم التحقق ✅' : 'لم يتم ❌'}
+              </div>
+            </div>
+          </div>
+          
+          <div class="gate-item ${gates.dns_verified ? 'passed' : 'blocked'}">
+            <div class="gate-icon">
+              <i class="fas fa-${gates.dns_verified ? 'check' : 'times'}"></i>
+            </div>
+            <div class="gate-info">
+              <div class="gate-label">
+                <i class="fas fa-globe"></i>
+                النطاق
+              </div>
+              <div class="gate-status">
+                ${gates.dns_verified ? 'تم التحقق ✅' : 'لم يتم ❌'}
+              </div>
+            </div>
+          </div>
+          
+          <div class="gate-item ${gates.contract_signed ? 'passed' : 'blocked'}">
+            <div class="gate-icon">
+              <i class="fas fa-${gates.contract_signed ? 'check' : 'times'}"></i>
+            </div>
+            <div class="gate-info">
+              <div class="gate-label">
+                <i class="fas fa-file-contract"></i>
+                العقد
+              </div>
+              <div class="gate-status">
+                ${gates.contract_signed ? 'موقّع ✅' : 'غير موقّع ❌'}
+              </div>
+            </div>
+          </div>
+          
+          ${gates.ssl_verified !== undefined ? `
+          <div class="gate-item ${gates.ssl_verified ? 'passed' : 'blocked'}">
+            <div class="gate-icon">
+              <i class="fas fa-${gates.ssl_verified ? 'lock' : 'lock-open'}"></i>
+            </div>
+            <div class="gate-info">
+              <div class="gate-label">
+                <i class="fas fa-shield-alt"></i>
+                SSL
+              </div>
+              <div class="gate-status">
+                ${gates.ssl_verified ? 'مفعّل ✅' : 'غير مفعّل ❌'}
+              </div>
+            </div>
+          </div>
+          ` : ''}
+        </div>
+        
+        ${project.blocked_reason ? `
+        <div class="gate-blocked-alert">
+          <i class="fas fa-exclamation-triangle"></i>
+          <strong>سبب الحجب:</strong> ${getBlockedReasonArabic(project.blocked_reason)}
+        </div>
+        ` : ''}
+      </div>
+    `;
   }).join('');
+  
+  container.classList.remove('loading');
 }
 
 // Render Knowledge Base
