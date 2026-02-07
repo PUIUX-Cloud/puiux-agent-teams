@@ -1,103 +1,316 @@
 {
-  "generated_at": "2026-02-07T17:43:58Z",
+  "generated_at": "2026-02-07T21:01:01.824Z",
   "system": {
     "status": "operational",
-    "uptime_hours": 24,
-    "version": "1.0.0"
+    "version": "1.0",
+    "uptime": null
   },
-  {
-    "knowledge_base": {
-      "total_files": 9,
-      "files": [
-        {"name": "delivery-playbook.md", "status": "complete", "last_updated": "2026-02-07"},
-        {"name": "design-system.md", "status": "complete", "last_updated": "2026-02-07"},
-        {"name": "discovery-template.md", "status": "complete", "last_updated": "2026-02-07"},
-        {"name": "engineering-standards.md", "status": "complete", "last_updated": "2026-02-07"},
-        {"name": "index.md", "status": "complete", "last_updated": "2026-02-07"},
-        {"name": "pods.md", "status": "complete", "last_updated": "2026-02-07"},
-        {"name": "proposal-templates.md", "status": "complete", "last_updated": "2026-02-07"},
-        {"name": "qa-checklist.md", "status": "complete", "last_updated": "2026-02-07"},
-        {"name": "sales-playbook.md", "status": "complete", "last_updated": "2026-02-07"}
-      ]
-    },
-    "registry": {
-      "valid": true,
-      "total_clients": 1,
-      "by_status": {
-        "presales": 1,
-        "active": 0,
-        "paused": 0,
-        "delivered": 0,
-        "archived": 0
+  "runs_summary": {
+    "total": 4,
+    "successful": 4,
+    "failed": 0,
+    "blocked": 0
+  },
+  "gates_summary": {
+    "total": 2,
+    "ready": 0,
+    "blocked": 2,
+    "details": {
+      "demo-acme": {
+        "payment_verified": false,
+        "dns_verified": false,
+        "contract_signed": false
       },
-      "by_tier": {
-        "beta": 1,
-        "standard": 0,
-        "premium": 0
-      },
-      "duplicates": []
-    },
-    "projects": 
-[
-  {
-    "id": "client-demo-001",
-    "slug": "demo-acme",
-    "name": "ACME Corporation (Demo)",
-    "status": "presales",
-    "presales_stage": "PS0",
-    "tier": "beta",
-    "pod": "corporate",
-    "gates": {
-      "payment_verified": false,
-      "dns_verified": false,
-      "ssl_verified": false
-    },
-    "domains": {
-      "beta": "demo-acme.puiux.cloud",
-      "staging": "staging.demo-acme.puiux.cloud",
-      "production": "demo-acme.com"
-    },
-    "blocked_reason": "Payment not verified, DNS not verified"
-  }
-]
-,
-    "gates_summary": {
-      "total_projects": 1,
-      "blocked": 1,
-      "ready_for_production": 0,
-      "blocking_reasons": {
-        "payment_not_verified": 1,
-        "dns_not_verified": 1
-      }
-    },
-    "agents": {
-      "total": 0,
-      "active": 0,
-      "idle": 0,
-      "agents_list": []
-    },
-    "teams": {
-      "total": 0,
-      "active": 0,
-      "paused": 0,
-      "completed": 0
-    },
-    "activity_log": [
-      {
-        "timestamp": "2026-02-07T17:43:58Z",
-        "type": "system",
-        "message": "Dashboard updated"
-      }
-    ],
-    "deploy_status": {
-      "staging": {
-        "last_deploy": null,
-        "status": "not_configured"
-      },
-      "production": {
-        "last_attempt": null,
-        "status": "blocked",
-        "blocked_by": ["payment_not_verified", "dns_not_verified"]
+      "demo-retail": {
+        "payment_verified": false,
+        "dns_verified": false,
+        "contract_signed": false
       }
     }
+  },
+  "registry": {
+    "valid": true,
+    "total_clients": 2,
+    "by_status": {
+      "presales": 2,
+      "active": 0,
+      "paused": 0,
+      "delivered": 0,
+      "archived": 0
+    },
+    "by_tier": {
+      "beta": 2,
+      "standard": 0,
+      "premium": 0,
+      "enterprise": 0
+    },
+    "duplicates": []
+  },
+  "knowledge_base": {
+    "total_files": 9,
+    "files": [
+      {
+        "id": "design-system",
+        "title": "PUIUX Design System",
+        "path": "knowledge/puiux/design-system.md",
+        "tags": [
+          "design",
+          "ui",
+          "branding",
+          "guidelines"
+        ],
+        "category": "design",
+        "last_updated": "2026-02-07",
+        "description": "Visual identity, typography, colors, and component standards"
+      },
+      {
+        "id": "discovery-template",
+        "title": "Discovery Template",
+        "path": "knowledge/puiux/discovery-template.md",
+        "tags": [
+          "presales",
+          "discovery",
+          "requirements",
+          "questionnaire"
+        ],
+        "category": "presales",
+        "last_updated": "2026-02-07",
+        "description": "Client discovery questionnaire and requirements gathering"
+      },
+      {
+        "id": "engineering-standards",
+        "title": "Engineering Standards",
+        "path": "knowledge/puiux/engineering-standards.md",
+        "tags": [
+          "engineering",
+          "code-quality",
+          "best-practices",
+          "development"
+        ],
+        "category": "delivery",
+        "last_updated": "2026-02-07",
+        "description": "Coding standards, architecture patterns, and technical guidelines"
+      },
+      {
+        "id": "qa-checklist",
+        "title": "QA Checklist",
+        "path": "knowledge/puiux/qa-checklist.md",
+        "tags": [
+          "qa",
+          "testing",
+          "quality",
+          "checklist"
+        ],
+        "category": "qa",
+        "last_updated": "2026-02-07",
+        "description": "Quality assurance checklists and testing procedures"
+      },
+      {
+        "id": "pods",
+        "title": "Pods System",
+        "path": "knowledge/puiux/pods.md",
+        "tags": [
+          "organization",
+          "teams",
+          "pods",
+          "structure"
+        ],
+        "category": "organization",
+        "last_updated": "2026-02-07",
+        "description": "Pod organization structure and team composition"
+      },
+      {
+        "id": "delivery-playbook",
+        "title": "Delivery Playbook",
+        "path": "knowledge/puiux/delivery-playbook.md",
+        "tags": [
+          "delivery",
+          "project-management",
+          "workflow",
+          "stages"
+        ],
+        "category": "delivery",
+        "last_updated": "2026-02-07",
+        "description": "Complete delivery workflow from S0 to S5"
+      },
+      {
+        "id": "proposal-templates",
+        "title": "Proposal Templates",
+        "path": "knowledge/puiux/proposal-templates.md",
+        "tags": [
+          "presales",
+          "proposals",
+          "templates",
+          "sales"
+        ],
+        "category": "presales",
+        "last_updated": "2026-02-07",
+        "description": "Proposal templates for different project types"
+      },
+      {
+        "id": "sales-playbook",
+        "title": "Sales Playbook",
+        "path": "knowledge/puiux/sales-playbook.md",
+        "tags": [
+          "presales",
+          "sales",
+          "workflow",
+          "ps0-ps5"
+        ],
+        "category": "presales",
+        "last_updated": "2026-02-07",
+        "description": "Complete presales workflow from PS0 to PS5"
+      },
+      {
+        "id": "inspirations-index",
+        "title": "Inspirations Index",
+        "path": "knowledge/puiux/inspirations/index.md",
+        "tags": [
+          "design",
+          "inspiration",
+          "references",
+          "examples"
+        ],
+        "category": "design",
+        "last_updated": "2026-02-07",
+        "description": "Curated collection of design inspiration and references"
+      }
+    ]
+  },
+  "agents": {
+    "active": 6,
+    "available": 6
+  },
+  "projects": [
+    {
+      "slug": "demo-acme",
+      "name": "ACME Corporation (Demo)",
+      "status": "presales",
+      "tier": "beta",
+      "pod": "corporate",
+      "presales_stage": "PS0",
+      "domains": {
+        "beta": "demo-acme.puiux.cloud",
+        "staging": "staging.demo-acme.puiux.cloud",
+        "production": "demo-acme.com"
+      },
+      "gates": {
+        "payment_verified": false,
+        "dns_verified": false,
+        "ssl_verified": false
+      },
+      "latest_run": {
+        "run_id": "PS0-demo-acme-1770498061787",
+        "stage": "PS0",
+        "status": "success",
+        "timestamp": "2026-02-07T21:01:01.787Z",
+        "artifacts_count": 3
+      },
+      "blocked_reason": "Payment not verified, DNS not verified, Contract not signed"
+    },
+    {
+      "slug": "demo-retail",
+      "name": "RetailPro Solutions (Demo)",
+      "status": "presales",
+      "tier": "beta",
+      "pod": "enterprise",
+      "presales_stage": "PS0",
+      "domains": {
+        "beta": "demo-retail.puiux.cloud",
+        "staging": "staging.demo-retail.puiux.cloud",
+        "production": "retailpro.sa"
+      },
+      "gates": {
+        "payment_verified": false,
+        "dns_verified": false,
+        "ssl_verified": false
+      },
+      "latest_run": {
+        "run_id": "S3-demo-retail-1770496905756",
+        "stage": "S3",
+        "status": "success",
+        "timestamp": "2026-02-07T20:41:45.756Z",
+        "artifacts_count": 6
+      },
+      "blocked_reason": "Payment not verified, DNS not verified, Contract not signed"
+    }
+  ],
+  "recent_runs": [
+    {
+      "run_id": "PS0-demo-acme-1770498061787",
+      "client": "demo-acme",
+      "client_name": "ACME Corporation (Demo)",
+      "stage": "PS0",
+      "status": "success",
+      "timestamp": "2026-02-07T21:01:01.787Z",
+      "artifacts_count": 3,
+      "agents_count": 1,
+      "tokens_used": null,
+      "cost_usd": null
+    },
+    {
+      "run_id": "S3-demo-retail-1770496905756",
+      "client": "demo-retail",
+      "client_name": "RetailPro Solutions (Demo)",
+      "stage": "S3",
+      "status": "success",
+      "timestamp": "2026-02-07T20:41:45.756Z",
+      "artifacts_count": 6,
+      "agents_count": 1,
+      "tokens_used": null,
+      "cost_usd": null
+    },
+    {
+      "run_id": "S2-demo-retail-1770496905716",
+      "client": "demo-retail",
+      "client_name": "RetailPro Solutions (Demo)",
+      "stage": "S2",
+      "status": "success",
+      "timestamp": "2026-02-07T20:41:45.715Z",
+      "artifacts_count": 14,
+      "agents_count": 4,
+      "tokens_used": null,
+      "cost_usd": null
+    },
+    {
+      "run_id": "S2-demo-acme-1770496887094",
+      "client": "demo-acme",
+      "client_name": "ACME Corporation (Demo)",
+      "stage": "S2",
+      "status": "success",
+      "timestamp": "2026-02-07T20:41:27.094Z",
+      "artifacts_count": 14,
+      "agents_count": 4,
+      "tokens_used": null,
+      "cost_usd": null
+    }
+  ],
+  "activity_log": [
+    {
+      "timestamp": "2026-02-07T21:01:01.787Z",
+      "type": "success",
+      "message": "ACME Corporation (Demo) - PS0 - success (3 artifacts)"
+    },
+    {
+      "timestamp": "2026-02-07T20:41:45.756Z",
+      "type": "success",
+      "message": "RetailPro Solutions (Demo) - S3 - success (6 artifacts)"
+    },
+    {
+      "timestamp": "2026-02-07T20:41:45.715Z",
+      "type": "success",
+      "message": "RetailPro Solutions (Demo) - S2 - success (14 artifacts)"
+    },
+    {
+      "timestamp": "2026-02-07T20:41:27.094Z",
+      "type": "success",
+      "message": "ACME Corporation (Demo) - S2 - success (14 artifacts)"
+    }
+  ],
+  "metrics": {
+    "total_runs": 4,
+    "total_artifacts": 37,
+    "total_tokens": null,
+    "total_cost_usd": null
+  }
 }

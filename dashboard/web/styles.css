@@ -476,6 +476,52 @@ footer p {
   font-size: 14px;
 }
 
+/* Runs Table */
+.runs-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+.runs-table thead {
+  background: #f7fafc;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.runs-table th {
+  text-align: left;
+  padding: 12px;
+  font-weight: 600;
+  color: #4a5568;
+  font-size: 14px;
+}
+
+.runs-table td {
+  padding: 12px;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 14px;
+}
+
+.run-row.success {
+  background: #f0fff4;
+}
+
+.run-row.failed {
+  background: #fff5f5;
+}
+
+.run-row.blocked {
+  background: #fffaf0;
+}
+
+.runs-table code {
+  background: #edf2f7;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 12px;
+  font-family: 'Monaco', 'Menlo', monospace;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .cards-grid {

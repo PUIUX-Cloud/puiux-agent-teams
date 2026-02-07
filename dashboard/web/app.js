@@ -25,6 +25,7 @@ function renderDashboard(data) {
   renderGatesTable(data.projects);
   renderKnowledgeBase(data.knowledge_base);
   renderRegistryHealth(data.registry);
+  renderRecentRuns(data.recent_runs);
   renderActivityLog(data.activity_log);
   
   // Update last update time
@@ -215,9 +216,46 @@ function renderRegistryHealth(registry) {
   `;
 }
 
+// Render Recent Runs
+function renderRecentRuns(runs) {
+  const container = document.getElementById('runs-info');
+  
+  if (!runs || runs.length === 0) {
+    container.innerHTML = '<div class="empty-state">لا توجد عمليات تنفيذ</div>';
+    return;
+  }
+  
+  container.innerHTML = `
+    <table class="runs-table">
+      <thead>
+        <tr>
+          <th>Run ID</th>
+          <th>Client</th>
+          <th>Stage</th>
+          <th>Status</th>
+          <th>Artifacts</th>
+          <th>Timestamp</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${runs.map(run => `
+          <tr class="run-row ${run.status}">
+            <td><code>${run.run_id}</code></td>
+            <td>${run.client_name || run.client}</td>
+            <td><span class="badge">${run.stage}</span></td>
+            <td><span class="badge ${run.status}">${getRunStatusIcon(run.status)} ${run.status}</span></td>
+            <td>${run.artifacts_count} files</td>
+            <td>${formatTime(run.timestamp)}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
 // Render Activity Log
 function renderActivityLog(log) {
-  const container = document.getElementById('activity-log');
+  const container = document.getElementById('activity-info');
   
   if (!log || log.length === 0) {
     container.innerHTML = '<div class="empty-state">لا توجد أحداث</div>';
@@ -255,6 +293,16 @@ function getGatesStatusBadge(gates) {
     return '<span class="badge success">✅ Ready</span>';
   }
   return '<span class="badge blocked">⛔ Blocked</span>';
+}
+
+function getRunStatusIcon(status) {
+  const icons = {
+    'success': '✅',
+    'failed': '❌',
+    'blocked': '⛔',
+    'running': '⏳'
+  };
+  return icons[status] || '❓';
 }
 
 function formatTime(timestamp) {
