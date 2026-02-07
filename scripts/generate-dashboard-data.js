@@ -11,6 +11,7 @@
 
 const fs = require('fs').promises;
 const path = require('path');
+const lockfile = require('proper-lockfile');
 
 const OUTPUTS_DIR = path.join(__dirname, '..', 'outputs');
 const REGISTRY_PATH = path.join(__dirname, '..', '..', 'client-projects-registry', 'clients.json');
@@ -36,11 +37,37 @@ async function main() {
   // Generate metrics
   const metrics = generateMetrics(runs, registry, kb);
   
-  // Write metrics.json (atomic to prevent corruption)
-  const tmpFile = METRICS_OUTPUT + '.tmp';
-  await fs.writeFile(tmpFile, JSON.stringify(metrics, null, 2));
-  await fs.rename(tmpFile, METRICS_OUTPUT);
-  console.log(`✅ Dashboard data generated: ${METRICS_OUTPUT}`);
+  // Acquire lock before writing (prevents concurrent writes)
+  const lockDir = path.dirname(METRICS_OUTPUT);
+  const lockPath = path.join(lockDir, '.metrics.lock');
+  
+  let release;
+  try {
+    // Try to acquire lock (wait up to 10 seconds)
+    release = await lockfile.lock(lockDir, {
+      lockfilePath: lockPath,
+      retries: {
+        retries: 20,
+        minTimeout: 100,
+        maxTimeout: 500
+      }
+    });
+    
+    // Write metrics.json (atomic to prevent corruption)
+    const tmpFile = METRICS_OUTPUT + '.tmp';
+    await fs.writeFile(tmpFile, JSON.stringify(metrics, null, 2));
+    await fs.rename(tmpFile, METRICS_OUTPUT);
+    console.log(`✅ Dashboard data generated: ${METRICS_OUTPUT}`);
+    
+    // Generate health endpoint
+    await generateHealthEndpoint(metrics);
+    
+  } finally {
+    // Always release lock
+    if (release) {
+      await release();
+    }
+  }
   
   // Print summary
   console.log('\n📊 Summary:');
@@ -292,6 +319,38 @@ function getBlockedReason(gates) {
   if (!gates.contract_signed) reasons.push('Contract not signed');
   
   return reasons.length > 0 ? reasons.join(', ') : null;
+}
+
+/**
+ * Generate health endpoint
+ */
+async function generateHealthEndpoint(metrics) {
+  const HEALTH_OUTPUT = path.join(__dirname, '..', 'dashboard', 'web', 'health.json');
+  
+  const health = {
+    status: metrics.system.status === 'operational' ? 'operational' : 'degraded',
+    version: '1.0',
+    service: 'PUIUX Agent Teams Dashboard',
+    timestamp: new Date().toISOString(),
+    checks: {
+      filesystem: 'ok',
+      metrics: 'ok',
+      last_metrics_update: metrics.generated_at
+    },
+    metrics_summary: {
+      total_runs: metrics.runs_summary.total,
+      total_projects: metrics.registry.total_clients,
+      blocked_runs: metrics.runs_summary.blocked,
+      successful_runs: metrics.runs_summary.successful
+    }
+  };
+  
+  // Write health.json (atomic)
+  const tmpFile = HEALTH_OUTPUT + '.tmp';
+  await fs.writeFile(tmpFile, JSON.stringify(health, null, 2));
+  await fs.rename(tmpFile, HEALTH_OUTPUT);
+  
+  console.log(`✅ Health endpoint generated: ${HEALTH_OUTPUT}`);
 }
 
 // Run

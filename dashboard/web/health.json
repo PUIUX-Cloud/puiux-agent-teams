@@ -1,0 +1,17 @@
+{
+  "status": "operational",
+  "version": "1.0",
+  "service": "PUIUX Agent Teams Dashboard",
+  "timestamp": "2026-02-07T23:28:47.117Z",
+  "checks": {
+    "filesystem": "ok",
+    "metrics": "ok",
+    "last_metrics_update": "2026-02-07T23:28:47.113Z"
+  },
+  "metrics_summary": {
+    "total_runs": 5,
+    "total_projects": 2,
+    "blocked_runs": 2,
+    "successful_runs": 3
+  }
+}

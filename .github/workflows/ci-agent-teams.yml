@@ -91,6 +91,18 @@ jobs:
           
           echo "✅ All JSON files valid"
 
+      - name: Validate schemas (metrics + runs)
+        shell: bash
+        run: |
+          set -e
+          echo "Generating dashboard data..."
+          node scripts/generate-dashboard-data.js
+          
+          echo "Running schema validation..."
+          npm run validate:schemas
+          
+          echo "✅ All schemas valid"
+
       - name: Validate test case IDs (both clients)
         shell: bash
         run: |

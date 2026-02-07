@@ -1,0 +1,41 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "PUIUX Agent Teams - Metrics Schema",
+  "type": "object",
+  "required": ["generated_at", "system", "runs_summary"],
+  "properties": {
+    "generated_at": {
+      "type": "string"
+    },
+    "system": {
+      "type": "object"
+    },
+    "runs_summary": {
+      "type": "object"
+    },
+    "gates_summary": {
+      "type": "object"
+    },
+    "registry": {
+      "type": "object"
+    },
+    "knowledge_base": {
+      "type": "object"
+    },
+    "agents": {
+      "type": "object"
+    },
+    "projects": {
+      "type": "array"
+    },
+    "recent_runs": {
+      "type": "array"
+    },
+    "activity_log": {
+      "type": "array"
+    },
+    "metrics": {
+      "type": "object"
+    }
+  }
+}

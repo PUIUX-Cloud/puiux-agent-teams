@@ -1,0 +1,19 @@
+{
+  "name": "puiux-agent-teams",
+  "version": "1.0.0",
+  "description": "PUIUX Agent Teams - Multi-agent orchestration system",
+  "scripts": {
+    "validate:schemas": "npm run validate:metrics && npm run validate:runs",
+    "validate:metrics": "ajv validate -s schemas/metrics.schema.json -d dashboard/state/metrics.json",
+    "validate:runs": "find outputs -name 'run.json' -exec ajv validate -s schemas/run.schema.json -d {} \\;",
+    "test": "npm run validate:schemas"
+  },
+  "dependencies": {
+    "proper-lockfile": "^4.1.2"
+  },
+  "devDependencies": {
+    "ajv": "^8.17.1",
+    "ajv-cli": "^5.0.0",
+    "ajv-formats": "^3.0.1"
+  }
+}
