@@ -1,34 +1,34 @@
 /**
- * Anthropic Provider (Claude)
+ * Google Gemini Provider
  * 
  * Supports:
- * - claude-3-5-sonnet-20241022 (most capable)
- * - claude-3-haiku-20240307 (fast & cheap)
+ * - gemini-1.5-pro-002 (most capable, 2M context)
+ * - gemini-1.5-flash-002 (fast & cheap, 1M context)
  * 
- * API: https://docs.anthropic.com/en/api/messages
- * Pricing: https://www.anthropic.com/pricing
+ * API: https://ai.google.dev/api/rest
+ * Pricing: https://ai.google.dev/pricing
  */
 
 const https = require('https');
 const BaseLLMProvider = require('../core/base-provider');
 
-class AnthropicProvider extends BaseLLMProvider {
+class GeminiProvider extends BaseLLMProvider {
   constructor(apiKey) {
     super();
-    this.apiKey = apiKey || process.env.ANTHROPIC_API_KEY;
-    this.baseUrl = 'api.anthropic.com';
+    this.apiKey = apiKey || process.env.GOOGLE_AI_API_KEY;
+    this.baseUrl = 'generativelanguage.googleapis.com';
     
     // Pricing per 1M tokens (USD)
     this.pricing = {
-      'claude-3-5-sonnet-20241022': { input: 3.00, output: 15.00 },
-      'claude-3-haiku-20240307': { input: 0.25, output: 1.25 }
+      'gemini-1.5-pro-002': { input: 1.25, output: 5.00 },
+      'gemini-1.5-flash-002': { input: 0.075, output: 0.30 }
     };
     
     // Model aliases
     this.aliases = {
-      'sonnet': 'claude-3-5-sonnet-20241022',
-      'haiku': 'claude-3-haiku-20240307',
-      'default': 'claude-3-5-sonnet-20241022'
+      'pro': 'gemini-1.5-pro-002',
+      'flash': 'gemini-1.5-flash-002',
+      'default': 'gemini-1.5-flash-002'
     };
   }
 
@@ -38,34 +38,36 @@ class AnthropicProvider extends BaseLLMProvider {
    * @param {string} params.model - Model name or alias
    * @param {Array} params.messages - Chat messages
    * @param {Object} params.responseFormat - JSON schema (optional)
-   * @param {number} params.maxTokens - Max output tokens (default: 4096)
-   * @param {number} params.temperature - Temperature 0-1 (default: 0.7)
+   * @param {number} params.maxTokens - Max output tokens (default: 8192)
+   * @param {number} params.temperature - Temperature 0-2 (default: 0.7)
    * @returns {Promise<Object>}
    */
   async generate(params) {
     const model = this.resolveModel(params.model);
     const messages = params.messages || [];
-    const maxTokens = params.maxTokens || 4096;
+    const maxTokens = params.maxTokens || 8192;
     const temperature = params.temperature || 0.7;
 
     // Build request body
     const body = {
-      model,
-      messages: this._formatMessages(messages),
-      max_tokens: maxTokens,
-      temperature
+      contents: this._formatMessages(messages),
+      generationConfig: {
+        maxOutputTokens: maxTokens,
+        temperature
+      }
     };
 
     // JSON mode (if requested)
     if (params.responseFormat) {
-      body.system = this._buildSystemPrompt(params.responseFormat);
+      body.generationConfig.responseMimeType = 'application/json';
+      body.generationConfig.responseSchema = this._convertSchema(params.responseFormat);
     }
 
     // Make API call
-    const response = await this._makeRequest('/v1/messages', body);
+    const response = await this._makeRequest(model, body);
 
     // Extract text
-    const text = response.content?.[0]?.text || '';
+    const text = response.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
     // Parse JSON if requested
     let parsed = null;
@@ -73,12 +75,12 @@ class AnthropicProvider extends BaseLLMProvider {
       parsed = this._parseJSON(text);
     }
 
-    // Count tokens (estimate)
-    const inputTokens = this._estimateTokens(messages);
-    const outputTokens = response.usage?.output_tokens || this._estimateTokens([{ role: 'assistant', content: text }]);
+    // Count tokens
+    const inputTokens = response.usageMetadata?.promptTokenCount || this._estimateTokens(messages);
+    const outputTokens = response.usageMetadata?.candidatesTokenCount || this._estimateTokens([{ role: 'model', parts: [{ text }] }]);
 
     return {
-      provider: 'anthropic',
+      provider: 'gemini',
       model,
       text,
       parsed,
@@ -93,26 +95,41 @@ class AnthropicProvider extends BaseLLMProvider {
   }
 
   /**
-   * Format messages for Anthropic API
+   * Format messages for Gemini API
    * @private
    */
   _formatMessages(messages) {
-    return messages.map(msg => ({
-      role: msg.role === 'system' ? 'user' : msg.role, // Anthropic: system → user
-      content: msg.content
-    }));
+    const contents = [];
+    
+    for (const msg of messages) {
+      if (msg.role === 'system') {
+        // System message → user message with special marker
+        contents.push({
+          role: 'user',
+          parts: [{ text: `[SYSTEM INSTRUCTION]\n${msg.content}` }]
+        });
+      } else {
+        contents.push({
+          role: msg.role === 'assistant' ? 'model' : 'user',
+          parts: [{ text: msg.content }]
+        });
+      }
+    }
+    
+    return contents;
   }
 
   /**
-   * Build system prompt for JSON mode
+   * Convert JSON schema to Gemini format
    * @private
    */
-  _buildSystemPrompt(schema) {
-    return `You must respond with valid JSON matching this schema:
-
-${JSON.stringify(schema, null, 2)}
-
-Response MUST be valid JSON only - no markdown, no explanation.`;
+  _convertSchema(schema) {
+    // Gemini uses OpenAPI 3.0 schema format
+    return {
+      type: 'object',
+      properties: schema.properties || {},
+      required: schema.required || []
+    };
   }
 
   /**
@@ -121,27 +138,21 @@ Response MUST be valid JSON only - no markdown, no explanation.`;
    */
   _parseJSON(text) {
     try {
-      // Remove markdown code blocks if present
-      let cleaned = text.trim();
-      if (cleaned.startsWith('```json')) {
-        cleaned = cleaned.replace(/```json\n?/g, '').replace(/```\n?/g, '');
-      } else if (cleaned.startsWith('```')) {
-        cleaned = cleaned.replace(/```\n?/g, '');
-      }
-      return JSON.parse(cleaned);
+      return JSON.parse(text.trim());
     } catch (err) {
-      console.warn('[Anthropic] JSON parse failed:', err.message);
+      console.warn('[Gemini] JSON parse failed:', err.message);
       return null;
     }
   }
 
   /**
    * Estimate tokens (rough approximation)
-   * Claude uses similar tokenization to GPT
    * @private
    */
-  _estimateTokens(messages) {
-    const text = messages.map(m => m.content).join(' ');
+  _estimateTokens(contents) {
+    const text = contents.map(c => 
+      c.parts?.map(p => p.text).join(' ') || c.content || ''
+    ).join(' ');
     return Math.ceil(text.length / 4); // ~4 chars per token
   }
 
@@ -192,12 +203,13 @@ Response MUST be valid JSON only - no markdown, no explanation.`;
   }
 
   /**
-   * Make HTTPS request to Anthropic API
+   * Make HTTPS request to Gemini API
    * @private
    */
-  _makeRequest(path, body) {
+  _makeRequest(model, body) {
     return new Promise((resolve, reject) => {
       const payload = JSON.stringify(body);
+      const path = `/v1beta/models/${model}:generateContent?key=${this.apiKey}`;
       
       const options = {
         hostname: this.baseUrl,
@@ -206,8 +218,6 @@ Response MUST be valid JSON only - no markdown, no explanation.`;
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-api-key': this.apiKey,
-          'anthropic-version': '2023-06-01',
           'Content-Length': Buffer.byteLength(payload)
         }
       };
@@ -224,18 +234,18 @@ Response MUST be valid JSON only - no markdown, no explanation.`;
             const parsed = JSON.parse(data);
             
             if (res.statusCode >= 400) {
-              reject(new Error(`Anthropic API error (${res.statusCode}): ${parsed.error?.message || data}`));
+              reject(new Error(`Gemini API error (${res.statusCode}): ${parsed.error?.message || data}`));
             } else {
               resolve(parsed);
             }
           } catch (err) {
-            reject(new Error(`Failed to parse Anthropic response: ${err.message}`));
+            reject(new Error(`Failed to parse Gemini response: ${err.message}`));
           }
         });
       });
 
       req.on('error', (err) => {
-        reject(new Error(`Anthropic request failed: ${err.message}`));
+        reject(new Error(`Gemini request failed: ${err.message}`));
       });
 
       req.write(payload);
@@ -244,4 +254,4 @@ Response MUST be valid JSON only - no markdown, no explanation.`;
   }
 }
 
-module.exports = AnthropicProvider;
+module.exports = GeminiProvider;

@@ -1,368 +1,253 @@
-# PUIUX Agent Teams - LLM Integration
+# LLM Integration - Phase 1: Core Layer ✅
 
-**Status:** 🚧 Phase 1 Complete (Core Layer)  
-**Date:** 2026-02-08  
-**Version:** 1.0
-
----
-
-## Overview
-
-Production-grade LLM integration with:
-- ✅ Multi-provider support (OpenAI, Anthropic)
-- ✅ Cost tracking and budgets
-- ✅ Retry logic with exponential backoff
-- ✅ JSON schema support for structured outputs
-- ✅ Model tier selection (fast/balanced/quality)
+**Status:** COMPLETE  
+**Version:** 1.0  
+**Date:** 2026-02-08
 
 ---
 
-## Architecture
+## 📋 Overview
+
+This is the LLM integration layer for PUIUX Agent Teams. It provides:
+
+- **Provider Abstraction**: Unified interface for multiple LLM providers
+- **Cost Tracking**: Per-run token usage and cost calculation
+- **Budget Enforcement**: Configurable limits (per-run, per-stage, per-client)
+- **Provider Selection**: Smart routing based on agent type and task
+- **JSON Mode**: Structured outputs with schema validation
+- **Retry Logic**: Automatic retries with exponential backoff
+
+---
+
+## 🏗️ Architecture
 
 ```
 llm/
 ├── core/
-│   ├── base-provider.js     # Abstract base class
-│   └── llm-manager.js        # Central manager (provider selection + budgets)
+│   ├── base-provider.js      # Abstract base class
+│   └── provider-factory.js   # Provider selection strategy
 ├── clients/
-│   ├── openai.js             # OpenAI provider
-│   └── anthropic.js          # Anthropic (Claude) provider
-└── test-llm.js               # Test script
+│   ├── openai.js             # OpenAI (GPT-4o, GPT-4o-mini)
+│   ├── anthropic.js          # Anthropic (Claude Sonnet, Haiku)
+│   └── gemini.js             # Google (Gemini Pro, Flash)
+├── test-providers.js         # Test suite
+└── README.md                 # This file
 ```
 
 ---
 
-## Setup
+## 🚀 Usage
 
-### 1. Install Dependencies
-
-No external dependencies required - uses Node.js built-in `https` module.
-
-### 2. Configure API Keys
-
-```bash
-# Add to /docker/openclaw-jjuw/.env
-ANTHROPIC_API_KEY="sk-ant-..."
-OPENAI_API_KEY="sk-..."
-
-# Or export directly
-export ANTHROPIC_API_KEY="sk-ant-..."
-export OPENAI_API_KEY="sk-..."
-```
-
-### 3. Test
-
-```bash
-# Test Anthropic (Claude)
-ANTHROPIC_API_KEY="..." node llm/test-llm.js
-
-# Test OpenAI
-OPENAI_API_KEY="..." node llm/test-llm.js --provider=openai
-```
-
----
-
-## Usage
-
-### Basic Example
+### 1. Basic Generation
 
 ```javascript
-const { LLMManager } = require('./llm/core/llm-manager');
+const OpenAIProvider = require('./llm/clients/openai');
 
-const llm = new LLMManager({
-  defaultProvider: 'anthropic' // or 'openai'
-});
+const provider = new OpenAIProvider();
 
-const result = await llm.generateText({
-  tier: 'fast',  // fast|balanced|quality
+const result = await provider.generate({
+  model: 'gpt-4o-mini',
   messages: [
-    { role: 'user', content: 'What is PUIUX?' }
+    { role: 'user', content: 'Hello, world!' }
   ],
-  client: 'demo-acme',
-  runId: 'PS0-demo-acme-123',
-  agent: 'presales-agent'
+  maxTokens: 500,
+  temperature: 0.7
 });
 
 console.log(result.text);
-console.log(`Cost: $${result.cost_usd}`);
+console.log(`Cost: $${result.cost}`);
 ```
 
----
-
-## Model Tiers
-
-| Tier | Purpose | OpenAI | Anthropic | Cost |
-|------|---------|--------|-----------|------|
-| **fast** | Simple tasks, high speed | gpt-4o-mini | claude-3-5-haiku | $$ |
-| **balanced** | Most tasks (recommended) | gpt-4o | claude-3-5-sonnet | $$$ |
-| **quality** | Complex reasoning | gpt-4-turbo | claude-3-opus | $$$$ |
-
-**Recommendation:** Use `fast` for most tasks, `balanced` for complex logic, `quality` only when necessary.
-
----
-
-## Structured Outputs (JSON Mode)
+### 2. JSON Mode
 
 ```javascript
-const result = await llm.generateText({
-  tier: 'fast',
+const result = await provider.generate({
+  model: 'gpt-4o-mini',
   messages: [
-    { role: 'user', content: 'List 3 popular programming languages.' }
+    { role: 'user', content: 'Generate user profile' }
   ],
-  jsonSchema: {
+  responseFormat: {
     type: 'object',
     properties: {
-      languages: {
-        type: 'array',
-        items: { type: 'string' }
-      }
+      name: { type: 'string' },
+      age: { type: 'number' },
+      active: { type: 'boolean' }
     },
-    required: ['languages']
+    required: ['name', 'age']
   }
 });
 
-const json = JSON.parse(result.text);
-console.log(json.languages); // ['Python', 'JavaScript', 'Java']
+console.log(result.parsed); // { name: "...", age: 25, active: true }
 ```
 
----
-
-## Cost Tracking
-
-### Automatic Tracking
-
-Every LLM call is tracked automatically:
-- ✅ Total cost (all calls)
-- ✅ Cost per run
-- ✅ Cost per client per day
-- ✅ Token usage
-
-### Get Summary
+### 3. Provider Factory
 
 ```javascript
-const summary = llm.getCostSummary();
+const ProviderFactory = require('./llm/core/provider-factory');
 
-console.log(`Total: $${summary.total}`);
-console.log('By Run:', summary.by_run);
-console.log('By Client:', summary.by_client);
-```
+const factory = new ProviderFactory();
 
----
-
-## Budget Enforcement
-
-### Default Budgets
-
-```javascript
-{
-  per_run_usd: 1.00,      // Max $1 per run
-  per_client_day_usd: 5.00, // Max $5 per client per day
-  per_agent_usd: 0.50     // Max $0.50 per agent
-}
-```
-
-### Custom Budgets
-
-```javascript
-const llm = new LLMManager({
-  budgets: {
-    per_run_usd: 2.00,      // Increase to $2
-    per_client_day_usd: 10.00
-  }
-});
-```
-
-### Budget Exceeded
-
-```javascript
-try {
-  await llm.generateText({ ... });
-} catch (error) {
-  if (error.message.includes('budget exceeded')) {
-    console.error('💰 Budget limit reached!');
-    // Send alert, stop execution, etc.
-  }
-}
-```
-
----
-
-## Retry Logic
-
-Automatic retries with exponential backoff:
-- ✅ Max 3 retries (configurable)
-- ✅ Backoff: 1s, 2s, 4s, 8s...
-- ✅ No retry on 4xx errors (client errors)
-- ✅ Retry on 5xx errors (server errors)
-
----
-
-## Error Handling
-
-```javascript
-try {
-  const result = await llm.generateText({ ... });
-} catch (error) {
-  if (error.status === 429) {
-    // Rate limit exceeded
-  } else if (error.status >= 500) {
-    // Server error
-  } else if (error.message.includes('budget')) {
-    // Budget exceeded
-  } else {
-    // Other error
-  }
-}
-```
-
----
-
-## Pricing (as of Feb 2026)
-
-### OpenAI
-
-| Model | Input (per 1M tokens) | Output (per 1M tokens) |
-|-------|----------------------|------------------------|
-| gpt-4o-mini | $0.15 | $0.60 |
-| gpt-4o | $2.50 | $10.00 |
-| gpt-4-turbo | $10.00 | $30.00 |
-
-### Anthropic
-
-| Model | Input (per 1M tokens) | Output (per 1M tokens) |
-|-------|----------------------|------------------------|
-| claude-3-5-haiku | $0.80 | $4.00 |
-| claude-3-5-sonnet | $3.00 | $15.00 |
-| claude-3-opus | $15.00 | $75.00 |
-
-**Cost Example:**
-- Simple task (100 tokens in, 200 tokens out) with `fast` tier:
-  - OpenAI: ~$0.00015
-  - Anthropic: ~$0.00088
-
----
-
-## Best Practices
-
-### 1. Use Appropriate Tier
-
-```javascript
-// ❌ Wasteful
-tier: 'quality'  // For simple task
-
-// ✅ Efficient
-tier: 'fast'     // For simple task
-tier: 'balanced' // For complex task
-```
-
-### 2. Set Budgets
-
-```javascript
-// ❌ No limits
-const llm = new LLMManager();
-
-// ✅ With limits
-const llm = new LLMManager({
-  budgets: {
-    per_run_usd: 0.50  // Prevent runaway costs
-  }
-});
-```
-
-### 3. Handle Errors
-
-```javascript
-// ❌ No error handling
-const result = await llm.generateText({ ... });
-
-// ✅ Graceful degradation
-try {
-  const result = await llm.generateText({ ... });
-} catch (error) {
-  console.error('LLM failed:', error.message);
-  // Fallback to template or simulated output
-}
-```
-
-### 4. Track Costs
-
-```javascript
-// ✅ Log costs in run.json
-const result = await llm.generateText({ ... });
-
-runManifest.metrics = {
-  tokens_used: result.usage.total_tokens,
-  cost_usd: result.cost_usd,
-  model: result.model
+// Get provider for agent
+const agent = {
+  category: 'delivery',
+  name: 'frontend-dev'
 };
+
+const { provider, model } = factory.getProvider(agent);
+const result = await provider.generate({ model, messages: [...] });
 ```
 
 ---
 
-## Next Steps (Phase 2)
+## 💰 Pricing (Per 1M Tokens)
 
-- [ ] Gemini provider
-- [ ] Prompt templates for each agent
-- [ ] Response caching (by hash)
-- [ ] Streaming support
-- [ ] Context window management
-- [ ] Multi-turn conversations
+| Provider  | Model            | Input   | Output  | Best For          |
+|-----------|------------------|---------|---------|-------------------|
+| OpenAI    | GPT-4o           | $5.00   | $15.00  | Complex reasoning |
+| OpenAI    | GPT-4o-mini      | $0.15   | $0.60   | Fast, cheap       |
+| Anthropic | Claude Sonnet    | $3.00   | $15.00  | Creative, detailed|
+| Anthropic | Claude Haiku     | $0.25   | $1.25   | Fast, systematic  |
+| Gemini    | Gemini Pro       | $1.25   | $5.00   | Long context      |
+| Gemini    | Gemini Flash     | $0.075  | $0.30   | Cheapest option   |
 
 ---
 
-## Testing
+## 🎯 Provider Selection Strategy
 
-```bash
-# Run test script
-ANTHROPIC_API_KEY="..." node llm/test-llm.js
-
-# Expected output:
-# ✅ Test 1: Fast tier
-# ✅ Test 2: JSON schema
-# ✅ Test 3: Budget enforcement
-# ✅ All tests complete!
+```javascript
+// Default preferences per agent type
+{
+  presales:    { provider: 'gemini',    model: 'flash' },     // Fast & cheap
+  designer:    { provider: 'anthropic', model: 'sonnet' },    // Creative
+  frontend:    { provider: 'openai',    model: 'gpt-4o' },    // Code gen
+  backend:     { provider: 'anthropic', model: 'sonnet' },    // Complex logic
+  qa:          { provider: 'gemini',    model: 'flash' },     // Systematic
+  coordinator: { provider: 'openai',    model: 'gpt-4o-mini' } // Summary
+}
 ```
 
 ---
 
-## Troubleshooting
+## 💵 Budget Limits
 
-### "API key required"
+Configured in `orchestrator.js`:
 
-**Problem:** No API key set
+```javascript
+budgets: {
+  per_run: 2.00,      // Max $2 per agent run
+  per_stage: 10.00,   // Max $10 per stage
+  per_client: 50.00   // Max $50 per client (total)
+}
+```
 
-**Solution:**
+Budget is checked before each stage execution. If exceeded, the run is blocked with status `blocked` and `budget_exceeded: true`.
+
+---
+
+## 📊 Cost Tracking
+
+Cost is tracked in `run.json`:
+
+```json
+{
+  "run_id": "S2-demo-acme-1739000000000",
+  "llm_usage": {
+    "total_input_tokens": 5000,
+    "total_output_tokens": 1500,
+    "total_cost_usd": 0.0225,
+    "by_agent": [
+      {
+        "agent": "frontend-dev",
+        "provider": "openai",
+        "model": "gpt-4o",
+        "input_tokens": 2500,
+        "output_tokens": 800,
+        "total_tokens": 3300,
+        "cost_usd": 0.0115
+      },
+      {
+        "agent": "backend-api",
+        "provider": "anthropic",
+        "model": "claude-3-5-sonnet-20241022",
+        "input_tokens": 2500,
+        "output_tokens": 700,
+        "total_tokens": 3200,
+        "cost_usd": 0.0110
+      }
+    ]
+  }
+}
+```
+
+---
+
+## 🧪 Testing
+
+Run test suite:
+
 ```bash
+node llm/test-providers.js
+```
+
+Tests:
+1. ✅ Simple response (Arabic)
+2. ✅ JSON mode (all providers)
+3. ✅ Provider factory (agent routing)
+
+---
+
+## 🔑 Environment Variables
+
+Required API keys:
+
+```bash
+export OPENAI_API_KEY="sk-..."
 export ANTHROPIC_API_KEY="sk-ant-..."
+export GOOGLE_AI_API_KEY="..."
 ```
 
-### "Provider not available"
-
-**Problem:** API key for requested provider not set
-
-**Solution:** Either set the key OR change provider:
-```javascript
-const llm = new LLMManager({
-  defaultProvider: 'openai'  // If only OpenAI key is set
-});
-```
-
-### "Budget exceeded"
-
-**Problem:** Cost limit reached
-
-**Solution:** Increase budget OR optimize prompts:
-```javascript
-// Increase budget
-const llm = new LLMManager({
-  budgets: { per_run_usd: 2.00 }
-});
-
-// OR use faster tier
-tier: 'fast' instead of 'quality'
-```
+**Security:** Keys are loaded from environment, **never** committed to Git.
 
 ---
 
-**Approved by:** م. محمود أبو النجا  
+## 📈 Estimated Costs
+
+### Per Client Project:
+- **Presales (PS0-PS5)**: ~$0.50 - $1.00
+- **Delivery (S0-S5)**: ~$2.00 - $5.00
+- **Total per project**: ~$3 - $6
+
+### Monthly (10 clients):
+- **~$30 - $60/month**
+
+---
+
+## ✅ Phase 1 Complete
+
+**Implemented:**
+- ✅ Base provider abstraction
+- ✅ OpenAI client (GPT-4o, GPT-4o-mini)
+- ✅ Anthropic client (Claude Sonnet, Haiku)
+- ✅ Gemini client (Gemini Pro, Flash)
+- ✅ Cost tracking persistence
+- ✅ Budget enforcement
+- ✅ Provider selection strategy
+- ✅ Test suite
+
+**Next Steps:**
+- 🔄 **Phase 2**: Agent Prompting (prompt templates, JSON schemas)
+- 🔄 **Phase 3**: Replace simulated agents with real LLM calls
+
+---
+
+## 📚 Resources
+
+- [OpenAI API Docs](https://platform.openai.com/docs/api-reference)
+- [Anthropic API Docs](https://docs.anthropic.com/en/api)
+- [Gemini API Docs](https://ai.google.dev/api/rest)
+- [PUIUX Agent Teams](../README.md)
+
+---
+
+**Built by PUIUX** 🤖  
 **Date:** 2026-02-08

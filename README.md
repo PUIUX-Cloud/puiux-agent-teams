@@ -121,6 +121,61 @@ node scripts/generate-dashboard-data.js
 
 ---
 
+## LLM Integration ✅
+
+### Phase 1: Core Layer (COMPLETE)
+
+PUIUX Agent Teams integrates with multiple LLM providers:
+
+**Supported Providers:**
+- ✅ **OpenAI**: GPT-4o, GPT-4o-mini
+- ✅ **Anthropic**: Claude Sonnet, Claude Haiku
+- ✅ **Gemini**: Gemini Pro, Gemini Flash
+
+**Features:**
+- 💰 **Cost Tracking**: Per-run token usage and cost in `run.json`
+- 🛡️ **Budget Enforcement**: Configurable limits (per-run, per-stage, per-client)
+- 🎯 **Smart Routing**: Provider selection based on agent type
+- 📝 **JSON Mode**: Structured outputs with schema validation
+- 🔄 **Retry Logic**: Automatic retries with exponential backoff
+
+### Quick Example
+
+```javascript
+const ProviderFactory = require('./llm/core/provider-factory');
+
+const factory = new ProviderFactory();
+const { provider, model } = factory.getProvider({ category: 'presales', name: 'presales-discovery' });
+
+const result = await provider.generate({
+  model,
+  messages: [{ role: 'user', content: 'What is 2+2?' }]
+});
+
+console.log(result.text);
+console.log(`Cost: $${result.cost}`);
+```
+
+### Pricing
+
+| Provider  | Model            | Input/1M | Output/1M | Best For          |
+|-----------|------------------|----------|-----------|-------------------|
+| OpenAI    | GPT-4o           | $5       | $15       | Complex reasoning |
+| OpenAI    | GPT-4o-mini      | $0.15    | $0.60     | Fast, cheap       |
+| Anthropic | Claude Sonnet    | $3       | $15       | Creative tasks    |
+| Anthropic | Claude Haiku     | $0.25    | $1.25     | Fast, systematic  |
+| Gemini    | Gemini Pro       | $1.25    | $5        | Long context      |
+| Gemini    | Gemini Flash     | $0.075   | $0.30     | Cheapest option   |
+
+### Estimated Costs
+
+- **Per project**: ~$3 - $6
+- **Monthly (10 clients)**: ~$30 - $60
+
+**See:** [llm/README.md](./llm/README.md) for full documentation.
+
+---
+
 ## Agents
 
 ### Presales (PS0-PS5)
