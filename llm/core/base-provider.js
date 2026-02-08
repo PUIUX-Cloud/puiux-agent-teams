@@ -6,16 +6,9 @@
  */
 
 class BaseLLMProvider {
-  constructor(config = {}) {
-    this.config = config;
-    this.apiKey = config.apiKey;
-    this.defaultModel = config.defaultModel;
-    this.timeout = config.timeout || 60000; // 60 seconds default
-    this.maxRetries = config.maxRetries || 3;
-    
-    if (!this.apiKey) {
-      throw new Error(`${this.constructor.name}: API key required`);
-    }
+  constructor() {
+    // Base class - no initialization needed
+    // Subclasses will handle their own config
   }
 
   /**
@@ -95,4 +88,4 @@ class BaseLLMProvider {
   }
 }
 
-module.exports = { BaseLLMProvider };
+module.exports = BaseLLMProvider;

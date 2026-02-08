@@ -114,17 +114,21 @@ const result = await provider.generate({ model, messages: [...] });
 
 ## 🎯 Provider Selection Strategy
 
+**Priority: Gemini (cheapest) → Anthropic (quality) → OpenAI (when needed)**
+
 ```javascript
 // Default preferences per agent type
 {
-  presales:    { provider: 'gemini',    model: 'flash' },     // Fast & cheap
-  designer:    { provider: 'anthropic', model: 'sonnet' },    // Creative
-  frontend:    { provider: 'openai',    model: 'gpt-4o' },    // Code gen
-  backend:     { provider: 'anthropic', model: 'sonnet' },    // Complex logic
-  qa:          { provider: 'gemini',    model: 'flash' },     // Systematic
-  coordinator: { provider: 'openai',    model: 'gpt-4o-mini' } // Summary
+  presales:    { provider: 'gemini',    model: 'flash' },  // Fast & cheap
+  designer:    { provider: 'gemini',    model: 'pro' },    // Creative (Gemini Pro)
+  frontend:    { provider: 'gemini',    model: 'flash' },  // Code gen (fast)
+  backend:     { provider: 'anthropic', model: 'haiku' },  // Complex logic
+  qa:          { provider: 'gemini',    model: 'flash' },  // Systematic
+  coordinator: { provider: 'gemini',    model: 'flash' }   // Summary
 }
 ```
+
+**Cost optimization:** Most agents use Gemini (cheapest), only backend uses Anthropic for quality.
 
 ---
 
@@ -198,27 +202,53 @@ Tests:
 
 ## 🔑 Environment Variables
 
-Required API keys:
+### Setup
 
-```bash
-export OPENAI_API_KEY="sk-..."
-export ANTHROPIC_API_KEY="sk-ant-..."
-export GOOGLE_AI_API_KEY="..."
-```
+1. Copy `.env.example` to `.env`:
+   ```bash
+   cp .env.example .env
+   ```
 
-**Security:** Keys are loaded from environment, **never** committed to Git.
+2. Add your API keys to `.env`:
+   ```bash
+   # Required (free tier available)
+   GOOGLE_AI_API_KEY=AIzaSy...
+   
+   # Optional (for quality tasks)
+   ANTHROPIC_API_KEY=sk-ant-api03-...
+   
+   # Optional (not currently used)
+   OPENAI_API_KEY=sk-...
+   ```
+
+3. **Never commit `.env` to Git!** (already in `.gitignore`)
+
+### Get API Keys
+
+- **Gemini (Free):** https://ai.google.dev → Get API Key
+- **Anthropic:** https://console.anthropic.com → API Keys
+- **OpenAI:** https://platform.openai.com → API Keys
+
+**Security:** Keys are loaded from environment, **never** hardcoded or committed.
 
 ---
 
 ## 📈 Estimated Costs
 
+**With Gemini-first strategy:**
+
 ### Per Client Project:
-- **Presales (PS0-PS5)**: ~$0.50 - $1.00
-- **Delivery (S0-S5)**: ~$2.00 - $5.00
-- **Total per project**: ~$3 - $6
+- **Presales (PS0-PS5)**: ~$0.05 - $0.15 (Gemini Flash)
+- **Delivery (S0-S5)**: ~$0.20 - $0.50 (mostly Gemini, 1 Anthropic)
+- **Total per project**: ~$0.30 - $1.00
 
 ### Monthly (10 clients):
-- **~$30 - $60/month**
+- **~$3 - $10/month** (95% cheaper than before!)
+
+**Cost breakdown:**
+- 5 agents use Gemini Flash (~$0.000004/request)
+- 1 agent uses Anthropic Haiku (~$0.000021/request)
+- OpenAI not used (saves money)
 
 ---
 

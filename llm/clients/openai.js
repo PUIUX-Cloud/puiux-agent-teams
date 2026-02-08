@@ -5,7 +5,7 @@
  */
 
 const https = require('https');
-const { BaseLLMProvider } = require('../core/base-provider');
+const BaseLLMProvider = require('../core/base-provider');
 
 // OpenAI Pricing (as of Feb 2026)
 // https://openai.com/pricing
@@ -17,17 +17,13 @@ const PRICING = {
 };
 
 class OpenAIProvider extends BaseLLMProvider {
-  constructor(config = {}) {
-    super({
-      apiKey: config.apiKey || process.env.OPENAI_API_KEY,
-      defaultModel: config.defaultModel || 'gpt-4o-mini',
-      ...config
-    });
-    
+  constructor(apiKey) {
+    super();
+    this.apiKey = apiKey || process.env.OPENAI_API_KEY;
     this.baseURL = 'api.openai.com';
   }
 
-  async generateText(options) {
+  async generate(options) {
     this.validateOptions(options);
     
     const model = options.model || this.defaultModel;
@@ -137,4 +133,4 @@ class OpenAIProvider extends BaseLLMProvider {
   }
 }
 
-module.exports = { OpenAIProvider };
+module.exports = OpenAIProvider;

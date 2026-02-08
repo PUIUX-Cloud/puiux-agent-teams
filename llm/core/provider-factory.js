@@ -21,24 +21,25 @@ class ProviderFactory {
     };
     
     // Default preferences per agent type
+    // Priority: Gemini (cheapest) → Anthropic (quality) → OpenAI (when needed)
     this.defaultPreferences = {
       // Presales: Fast & cheap (lots of exploration)
       presales: { provider: 'gemini', model: 'flash' },
       
-      // Designer: Creative & detailed
-      designer: { provider: 'anthropic', model: 'sonnet' },
+      // Designer: Creative & detailed (Gemini Pro has good creative abilities)
+      designer: { provider: 'gemini', model: 'pro' },
       
       // Frontend: Structured output, code generation
-      frontend: { provider: 'openai', model: 'gpt-4o' },
+      frontend: { provider: 'gemini', model: 'flash' },
       
-      // Backend: Complex logic, API design
-      backend: { provider: 'anthropic', model: 'sonnet' },
+      // Backend: Complex logic, API design (Anthropic for quality)
+      backend: { provider: 'anthropic', model: 'haiku' },
       
       // QA: Fast & systematic
       qa: { provider: 'gemini', model: 'flash' },
       
       // Coordinator: Consolidation & summary
-      coordinator: { provider: 'openai', model: 'gpt-4o-mini' }
+      coordinator: { provider: 'gemini', model: 'flash' }
     };
   }
 

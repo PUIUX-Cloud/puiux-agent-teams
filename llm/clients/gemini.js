@@ -20,15 +20,16 @@ class GeminiProvider extends BaseLLMProvider {
     
     // Pricing per 1M tokens (USD)
     this.pricing = {
-      'gemini-1.5-pro-002': { input: 1.25, output: 5.00 },
-      'gemini-1.5-flash-002': { input: 0.075, output: 0.30 }
+      'gemini-2.5-pro': { input: 1.25, output: 5.00 },
+      'gemini-2.5-flash': { input: 0.075, output: 0.30 },
+      'gemini-2.0-flash': { input: 0.075, output: 0.30 }
     };
     
     // Model aliases
     this.aliases = {
-      'pro': 'gemini-1.5-pro-002',
-      'flash': 'gemini-1.5-flash-002',
-      'default': 'gemini-1.5-flash-002'
+      'pro': 'gemini-2.5-pro',
+      'flash': 'gemini-2.5-flash',
+      'default': 'gemini-2.5-flash'
     };
   }
 
@@ -45,7 +46,7 @@ class GeminiProvider extends BaseLLMProvider {
   async generate(params) {
     const model = this.resolveModel(params.model);
     const messages = params.messages || [];
-    const maxTokens = params.maxTokens || 8192;
+    const maxTokens = params.maxTokens || 2048;
     const temperature = params.temperature || 0.7;
 
     // Build request body
