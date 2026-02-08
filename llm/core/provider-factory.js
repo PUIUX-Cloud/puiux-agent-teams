@@ -21,16 +21,17 @@ class ProviderFactory {
     };
     
     // Default preferences per agent type
-    // Priority: Gemini (cheapest) → Anthropic (quality) → OpenAI (when needed)
+    // Strategy: Mix of Gemini (cheap) + OpenAI (quality) + Anthropic (backup)
     this.defaultPreferences = {
       // Presales: Fast & cheap (lots of exploration)
       presales: { provider: 'gemini', model: 'flash' },
       
-      // Designer: Creative & detailed (Gemini Pro has good creative abilities)
+      // Designer: Creative & detailed (Gemini Pro is good enough)
       designer: { provider: 'gemini', model: 'pro' },
       
-      // Frontend: Structured output, code generation
-      frontend: { provider: 'gemini', model: 'flash' },
+      // Frontend: Code generation (OpenAI GPT-4o is best for code)
+      // Note: Requires OpenAI API credit - falls back to Gemini if no key
+      frontend: { provider: 'openai', model: 'gpt-4o-mini' },
       
       // Backend: Complex logic, API design (Anthropic for quality)
       backend: { provider: 'anthropic', model: 'haiku' },
@@ -38,8 +39,9 @@ class ProviderFactory {
       // QA: Fast & systematic
       qa: { provider: 'gemini', model: 'flash' },
       
-      // Coordinator: Consolidation & summary
-      coordinator: { provider: 'gemini', model: 'flash' }
+      // Coordinator: Consolidation & summary (OpenAI good at this)
+      // Note: Requires OpenAI API credit - falls back to Gemini if no key
+      coordinator: { provider: 'openai', model: 'gpt-4o-mini' }
     };
   }
 
@@ -67,8 +69,16 @@ class ProviderFactory {
     const preference = this.defaultPreferences[agentType];
     
     if (preference) {
-      const provider = this.providers[preference.provider];
-      const model = preference.model;
+      let provider = this.providers[preference.provider];
+      let model = preference.model;
+      
+      // Smart fallback: If OpenAI requested but no API key, use Gemini
+      if (preference.provider === 'openai' && !process.env.OPENAI_API_KEY) {
+        console.warn(`[ProviderFactory] OpenAI requested for ${agentType} but no API key - falling back to Gemini Flash`);
+        provider = this.providers.gemini;
+        model = 'flash';
+      }
+      
       return { provider, model };
     }
 

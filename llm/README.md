@@ -114,21 +114,29 @@ const result = await provider.generate({ model, messages: [...] });
 
 ## 🎯 Provider Selection Strategy
 
-**Priority: Gemini (cheapest) → Anthropic (quality) → OpenAI (when needed)**
+**Strategy: Mix of Gemini (cheap) + OpenAI (quality) + Anthropic (backup)**
 
 ```javascript
 // Default preferences per agent type
 {
-  presales:    { provider: 'gemini',    model: 'flash' },  // Fast & cheap
-  designer:    { provider: 'gemini',    model: 'pro' },    // Creative (Gemini Pro)
-  frontend:    { provider: 'gemini',    model: 'flash' },  // Code gen (fast)
-  backend:     { provider: 'anthropic', model: 'haiku' },  // Complex logic
-  qa:          { provider: 'gemini',    model: 'flash' },  // Systematic
-  coordinator: { provider: 'gemini',    model: 'flash' }   // Summary
+  presales:    { provider: 'gemini',    model: 'flash' },      // Fast & cheap
+  designer:    { provider: 'gemini',    model: 'pro' },        // Creative
+  frontend:    { provider: 'openai',    model: 'gpt-4o-mini' },// Code gen (best)
+  backend:     { provider: 'anthropic', model: 'haiku' },      // Complex logic
+  qa:          { provider: 'gemini',    model: 'flash' },      // Systematic
+  coordinator: { provider: 'openai',    model: 'gpt-4o-mini' } // Consolidation
 }
 ```
 
-**Cost optimization:** Most agents use Gemini (cheapest), only backend uses Anthropic for quality.
+**Smart Fallback:** If OpenAI API key is missing (no credit), automatically falls back to Gemini Flash.
+
+**Cost with OpenAI:**
+- 4 agents use Gemini (~$0.000004/req)
+- 2 agents use OpenAI (~$0.000003/req for gpt-4o-mini)
+- 1 agent uses Anthropic (~$0.000021/req)
+
+**Cost without OpenAI (fallback):**
+- 6 agents use Gemini/Anthropic (same as before)
 
 ---
 
@@ -235,20 +243,31 @@ Tests:
 
 ## 📈 Estimated Costs
 
-**With Gemini-first strategy:**
+### Scenario 1: With OpenAI Credit (Recommended)
 
-### Per Client Project:
+**Per Client Project:**
 - **Presales (PS0-PS5)**: ~$0.05 - $0.15 (Gemini Flash)
-- **Delivery (S0-S5)**: ~$0.20 - $0.50 (mostly Gemini, 1 Anthropic)
+- **Delivery (S0-S5)**: ~$0.25 - $0.60 (Gemini + OpenAI + Anthropic)
+- **Total per project**: ~$0.40 - $1.20
+
+**Monthly (10 clients):** ~**$4 - $12/month**
+
+**Breakdown:**
+- 4 agents use Gemini (~$0.000004/req)
+- 2 agents use OpenAI GPT-4o-mini (~$0.000003/req)
+- 1 agent uses Anthropic Haiku (~$0.000021/req)
+
+### Scenario 2: Without OpenAI (Fallback)
+
+**Per Client Project:**
+- **Presales (PS0-PS5)**: ~$0.05 - $0.15 (Gemini Flash)
+- **Delivery (S0-S5)**: ~$0.20 - $0.50 (Gemini + Anthropic)
 - **Total per project**: ~$0.30 - $1.00
 
-### Monthly (10 clients):
-- **~$3 - $10/month** (95% cheaper than before!)
+**Monthly (10 clients):** ~**$3 - $10/month**
 
-**Cost breakdown:**
-- 5 agents use Gemini Flash (~$0.000004/request)
-- 1 agent uses Anthropic Haiku (~$0.000021/request)
-- OpenAI not used (saves money)
+**Breakdown:**
+- 6 agents use Gemini/Anthropic (auto-fallback if no OpenAI key)
 
 ---
 
